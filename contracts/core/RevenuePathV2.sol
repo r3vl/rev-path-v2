@@ -18,7 +18,7 @@ import "openzeppelin-solidity/contracts/security/ReentrancyGuard.sol";
  * - Separate Limit updates VS Distribution updates
  * - Re-evaluate ETH distribution
  * - Sequential data mapping => Reorg of tiers
- * 
+ *
  */
 interface IReveelMain {
     function getPlatformWallet() external view returns (address);
@@ -89,11 +89,16 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
     // @notice Total ERC20 accounted for the revenue path for a given token address
     mapping(address => uint256) private totalERC20Accounted;
 
+    //@notice ERC20 tier limits for given token address n tier
+    mapping(address => mapping(uint256 => uint256)) public tokenTierLimits;
+
+    mapping(address => uint256) private currentTokenTier;
+
     // array of address having erc20 distribution shares
     address[] private erc20DistributionWallets;
 
-    struct Revenue {
-        uint256 limitAmount;
+    struct RevenuePath {
+        
         address[] walletList;
     }
 
@@ -108,7 +113,7 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
     /**
      * #TODO: Change structure into keyId => maps
      */
-    Revenue[] private revenueTiers;
+    RevenuePath[] private revenueTiers;
 
     /********************************
      *           EVENTS              *
@@ -134,7 +139,6 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
      */
     event ERC20PaymentReleased(address indexed token, address indexed account, uint256 indexed payment);
 
-   
     /********************************
      *           MODIFIERS          *
      ********************************/
@@ -152,6 +156,11 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
      *           ERRORS          *
      ********************************/
 
+    /** @dev Reverts when passed wallet list and distribution list length is not equal
+     * @param walletCount Length of wallet list
+     * @param distributionCount Length of distribution list
+     */
+    error WalletAndDistrbtionCtMismatch(uint256 walletCount, uint256 distributionCount);
 
     /** @dev Reverts when the member has zero ETH withdrawal balance available
      */
@@ -177,9 +186,20 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
     error InsufficentBalance(uint256 contractBalance, uint256 requiredAmount);
 
     /**
-     * @dev Reverts when sum of all distribution is not equal to BASE
+     *  @dev Reverts when duplicate wallet entry is present during addition or updates
      */
-  
+
+    error DuplicateWalletEntry();
+
+    error ZeroAddressProvided();
+
+    error ZeroDistributionProvided();
+
+    error TokenAndLimitListNotEqual();
+
+    error TotalShareNot100();
+
+    error OnlyExistingTiersCanBeUpdated();
 
     /********************************
      *           FUNCTIONS           *
@@ -197,45 +217,144 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
         // Default fallback
     }
 
-
     function initialize(
         address[][] memory _walletList,
         uint256[][] memory _distribution,
         uint256[][] memory _tierLimit,
         PathInfo memory pathInfo,
         address _owner
-    ) external initializer {
-        
+    ) external initializer {}
+
+    function addRevenueTier(address[][] calldata _walletList, uint256[][] calldata _distribution)
+        external
+        isAllowed
+        onlyOwner
+    {
+        // #TODO:Check again for special edge cases
+
+        if (_walletList.length != _distribution.length) {
+            revert WalletAndDistrbtionCtMismatch({
+                walletCount: _walletList.length,
+                distributionCount: _distribution.length
+            });
+        }
+
+        uint256 listLength = _walletList.length;
+        uint256 nextRevenueTier = revenueTiers.length;
+
+        for (uint256 i; i < listLength; ) {
+            uint256 walletMembers = _walletList[i].length;
+
+            if (walletMembers != _distribution[i].length) {
+                revert WalletAndDistrbtionCtMismatch({
+                    walletCount: walletMembers,
+                    distributionCount: _distribution[i].length
+                });
+            }
+
+            // tier.walletList = _walletList[i];
+            uint256 totalShares;
+            for (uint256 j; j < walletMembers; ) {
+                if (revenueProportion[nextRevenueTier][(_walletList[i])[j]] > 0) {
+                    revert DuplicateWalletEntry();
+                }
+
+                if ((_walletList[i])[j] == address(0)) {
+                    revert ZeroAddressProvided();
+                }
+                if ((_distribution[i])[j] == 0) {
+                    revert ZeroDistributionProvided();
+                }
+
+                revenueProportion[nextRevenueTier][(_walletList[i])[j]] = (_distribution[i])[j];
+                totalShares += (_distribution[i])[j];
+                unchecked {
+                    j++;
+                }
+            }
+
+            if (totalShares != BASE) {
+                revert TotalShareNot100();
+            }
+            // revenueTiers.push(tier);
+            nextRevenueTier += 1;
+
+            unchecked {
+                i++;
+            }
+        }
+        if (!feeRequired) {
+            feeRequired = true;
+        }
     }
 
-
-    function addRevenueTier(
-        address[][] calldata _walletList,
-        uint256[][] calldata _distribution
-    ) external isAllowed onlyOwner {
-
-    }
-
- 
     function updateRevenueTier(
-        address[] calldata _walletList,
-        uint256[] calldata _distribution
+        address[][] calldata _walletList,
+        uint256[][] calldata _distribution,
+        uint256[] calldata _tierNumbers
     ) external isAllowed onlyOwner {
+        if (_walletList.length != _distribution.length) {
+            revert WalletAndDistrbtionCtMismatch({
+                walletCount: _walletList.length,
+                distributionCount: _distribution.length
+            });
+        }
 
+        //#TODO: remove dummy & reset validated value
+        uint256 totalTiers = 1;
+        uint256 totalUpdates = _tierNumbers.length;
+
+        for (uint256 i; i < totalUpdates; ) {
+            uint256 tier = _tierNumbers[i];
+            if (tier >= totalTiers) {
+                revert OnlyExistingTiersCanBeUpdated();
+            }
+
+            // #TODO: add wallet & distr list length validation
+            uint256 totalWallets = _walletList[i].length;
+            uint256 totalShares;
+            for (uint256 j; j < totalWallets; ) {
+                revenueProportion[tier][(_walletList[i])[j]] = (_distribution[i])[j];
+                totalShares += (_distribution[i])[j];
+
+                unchecked {
+                    j++;
+                }
+            }
+            if (totalShares != BASE) {
+                revert TotalShareNot100();
+            }
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /**
      * Update Limits based on tokens/ETH separately
      */
-    function updateLimits()
-        external
-        isAllowed
-        onlyOwner
-    {
-       /**
-        *  Limit sequence by address pointer
-        */
+    function updateLimits(
+        /**
+         * -update limit in mapping add+tier
+         */
+        address[] calldata tokenList,
+        uint256[] calldata newLimits,
+        uint256 tier
+    ) external isAllowed onlyOwner {
+        uint256 listCount = tokenList.length;
 
+        if (listCount != newLimits.length) {
+            revert TokenAndLimitListNotEqual();
+        }
+
+        for (uint256 i; i < listCount; ) {
+            //#TODO: Add token already distributed limit check validation + limit length validation
+            tokenTierLimits[tokenList[i]][tier] = newLimits[i];
+
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /** @notice Releases distributed ETH for the provided address
@@ -290,12 +409,11 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
     function getRevenueTier(uint256 tierNumber)
         external
         view
-        returns (uint256 _limitAmount, address[] memory _walletList)
+        returns ( address[] memory _walletList)
     {
         require(tierNumber <= revenueTiers.length, "TIER_DOES_NOT_EXIST");
-        uint256 limit = revenueTiers[tierNumber].limitAmount;
         address[] memory listWallet = revenueTiers[tierNumber].walletList;
-        return (limit, listWallet);
+        return (listWallet);
     }
 
     /** @notice Get the totalNumber of revenue tiers in the revenue path
@@ -305,9 +423,10 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
     }
 
     /** @notice Get the current ongoing tier of revenue path
+     * For eth: token address(0) is reserved
      */
-    function getCurrentTier() external view returns (uint256 tierNumber) {
-        return currentTier;
+    function getCurrentTier(address token) external view returns (uint256 tierNumber) {
+        return currentTokenTier[token];
     }
 
     /** @notice Get the current ongoing tier of revenue path
@@ -433,10 +552,10 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
         uint256 nextTierDistribution;
 
         if (
-            totalDistributed[presentTier] + amount > revenueTiers[presentTier].limitAmount &&
-            revenueTiers[presentTier].limitAmount > 0
+            totalDistributed[presentTier] + amount > tokenTierLimits[address(0)][presentTier] &&
+            tokenTierLimits[address(0)][presentTier] > 0
         ) {
-            currentTierDistribution = revenueTiers[presentTier].limitAmount - totalDistributed[presentTier];
+            currentTierDistribution = tokenTierLimits[address(0)][presentTier] - totalDistributed[presentTier];
             nextTierDistribution = amount - currentTierDistribution;
         }
 
