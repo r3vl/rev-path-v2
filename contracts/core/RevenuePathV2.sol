@@ -332,19 +332,20 @@ contract RevenuePathV2 is Ownable, Initializable, ReentrancyGuard {
             uint256 totalShares;
             address[] memory newWalletList = new address[](totalWallets);
             for (uint256 j; j < totalWallets; ) {
-                if (revenueProportion[tier][(_walletList[i])[j]] > 0) {
+                address wallet =( _walletList[i])[j];
+                if (revenueProportion[tier][wallet] > 0) {
                     revert DuplicateWalletEntry();
                 }
 
-                if ((_walletList[i])[j] == address(0)) {
+                if (wallet == address(0)) {
                     revert ZeroAddressProvided();
                 }
                 if ((_distribution[i])[j] == 0) {
                     revert ZeroDistributionProvided();
                 }
-                revenueProportion[tier][(_walletList[i])[j]] = (_distribution[i])[j];
+                revenueProportion[tier][wallet] = (_distribution[i])[j];
                 totalShares += (_distribution[i])[j];
-                newWalletList[j] = (_walletList[i])[j];
+                newWalletList[j] = wallet;
 
                 unchecked {
                     j++;
