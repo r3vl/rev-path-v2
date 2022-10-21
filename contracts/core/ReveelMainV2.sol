@@ -4,20 +4,19 @@ pragma solidity 0.8.15;
 import "openzeppelin-solidity/contracts/proxy/Clones.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/security/Pausable.sol";
+
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "./RevenuePathV2.sol";
 
-contract ReveelMainV2 is Ownable, Pausable {
-
+contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     uint256 public constant BASE = 1e4;
     //@notice Fee percentage that will be applicable for additional tiers
     uint88 private platformFee;
     //@notice Address of platform wallet to collect fees
     address private platformWallet;
-    
+
     //@notice The revenue path contract address who's bytecode will be used for cloning
     address private libraryAddress;
-
-
 
     /********************************
      *           EVENTS              *
@@ -59,35 +58,52 @@ contract ReveelMainV2 is Ownable, Pausable {
     constructor(
         address _libraryAddress,
         uint88 _platformFee,
-        address _platformWallet
+        address _platformWallet,
+        address _forwarder
     ) {
         if (_libraryAddress == address(0) || _platformWallet == address(0)) {
             revert ZeroAddressProvided();
         }
 
-        if(platformFee > BASE){
+        if (platformFee > BASE) {
             revert PlatformFeeNotAppropriate();
         }
         libraryAddress = _libraryAddress;
         platformFee = _platformFee;
         platformWallet = _platformWallet;
+        _setTrustedForwarder(_forwarder);
     }
 
     /**
      * #TODO:
      * - Assess struct format
      * - bytecode sequencing for limit
-     * 
+     *
      */
 
     function createRevenuePath(
-        address[][] memory _walletList,
-        uint256[][] memory _distribution,
-        address [] memory tokenList,
-        uint256 [][] memory limitSequence,
+        address[][] calldata _walletList,
+        uint256[][] calldata _distribution,
+        address[] memory _tokenList,
+        uint256[][] memory _limitSequence,
         string memory _name,
         bool isImmutable
     ) external whenNotPaused {
+        RevenuePathV2.PathInfo memory pathInfo;
+        pathInfo.name = _name;
+        pathInfo.platformFee = platformFee;
+        pathInfo.isImmutable = isImmutable;
+        pathInfo.factory = address(this);
+        pathInfo.forwarder= getTrustedForwarder();
+
+        RevenuePathV2(libraryAddress).initialize(
+            _walletList,
+            _distribution,
+            _tokenList,
+            _limitSequence,
+            pathInfo,
+            _msgSender()
+        );
     }
 
     /** @notice Sets the libaray contract address
@@ -105,8 +121,7 @@ contract ReveelMainV2 is Ownable, Pausable {
      * @param newFeePercentage The new fee percentage
      */
     function setPlatformFee(uint88 newFeePercentage) external onlyOwner {
-        
-        if(platformFee > BASE){
+        if (platformFee > BASE) {
             revert PlatformFeeNotAppropriate();
         }
         platformFee = newFeePercentage;
@@ -124,7 +139,6 @@ contract ReveelMainV2 is Ownable, Pausable {
         emit UpdatedPlatformWallet(platformWallet);
     }
 
-
     /**
      * @notice Owner can toggle & pause contract
      * @dev emits relevant Pausable events
@@ -136,8 +150,6 @@ contract ReveelMainV2 is Ownable, Pausable {
             _unpause();
         }
     }
-
-
 
     /** @notice Gets the libaray contract address
      */
@@ -157,7 +169,29 @@ contract ReveelMainV2 is Ownable, Pausable {
         return platformWallet;
     }
 
+    function setTrustedForwarder(address forwarder) external onlyOwner {
+        _setTrustedForwarder(forwarder);
+    }
+
     function renounceOwnership() public virtual override onlyOwner {
         revert();
+    }
+
+    function _msgSender() internal view virtual override(Context, ERC2771Recipient) returns (address ret) {
+        if (msg.data.length >= 20 && isTrustedForwarder(msg.sender)) {
+            assembly {
+                ret := shr(96, calldataload(sub(calldatasize(), 20)))
+            }
+        } else {
+            ret = msg.sender;
+        }
+    }
+
+    function _msgData() internal view virtual override(Context, ERC2771Recipient) returns (bytes calldata ret) {
+        if (msg.data.length >= 20 && isTrustedForwarder(msg.sender)) {
+            return msg.data[0:msg.data.length - 20];
+        } else {
+            return msg.data;
+        }
     }
 }
