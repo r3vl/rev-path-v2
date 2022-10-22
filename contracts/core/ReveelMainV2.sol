@@ -9,7 +9,7 @@ import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "./RevenuePathV2.sol";
 
 contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
-    uint256 public constant BASE = 1e4;
+    uint256 public constant BASE = 1e7;
     //@notice Fee percentage that will be applicable for additional tiers
     uint88 private platformFee;
     //@notice Address of platform wallet to collect fees
@@ -74,13 +74,9 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         _setTrustedForwarder(_forwarder);
     }
 
-    /**
-     * #TODO:
-     * - Assess struct format
-     * - bytecode sequencing for limit
-     *
+    /** @notice Creating new revenue path
+     * 
      */
-
     function createRevenuePath(
         address[][] calldata _walletList,
         uint256[][] calldata _distribution,
