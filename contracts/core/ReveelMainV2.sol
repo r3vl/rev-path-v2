@@ -21,6 +21,11 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     /********************************
      *           EVENTS              *
      ********************************/
+    /** @notice Emits when a new revenue path is created
+     * @param path The address of the new revenue path
+     */
+    event RevenuePathCreated(RevenuePathV2 indexed path, string name);
+
     /** @notice Updates the libaray contract address
      * @param newLibrary The address of the library contract
      */
@@ -92,7 +97,8 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         pathInfo.factory = address(this);
         pathInfo.forwarder= getTrustedForwarder();
 
-        RevenuePathV2(libraryAddress).initialize(
+        RevenuePathV2 path = RevenuePathV2(payable(Clones.clone(libraryAddress)));
+        path.initialize(
             _walletList,
             _distribution,
             _tokenList,
@@ -100,6 +106,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
             pathInfo,
             _msgSender()
         );
+        emit RevenuePathCreated(path,_name);
     }
 
     /** @notice Sets the libaray contract address
