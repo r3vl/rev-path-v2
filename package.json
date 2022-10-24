@@ -7,7 +7,6 @@
     "commit": "git-cz",
     "compile": "npx hardhat compile",
     "coverage": "cross-env CODE_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
-    "deploy": "hardhat deploy:Greeter",
     "lint": "npm run lint:sol && npm run lint:ts && npm run prettier:check",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:ts": "eslint --config ./.eslintrc.yaml --ignore-path ./.eslintignore --ext .js,.ts .",
@@ -17,7 +16,7 @@
     "prettier": "prettier --config ./.prettierrc.yaml --write \"**/*.{js,json,md,sol,ts}\"",
     "prettier:check": "prettier --check --config ./.prettierrc.yaml \"**/*.{js,json,md,sol,ts}\"",
     "test": "hardhat test",
-    "typechain": "TS_NODE_TRANSPILE_ONLY=true cross-env  hardhat typechain"
+    "typechain": "TS_NODE_TRANSPILE_ONLY=true cross-env hardhat typechain"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -55,7 +54,7 @@
     "eslint-config-prettier": "^8.3.0",
     "ethers": "^5.4.7",
     "fs-extra": "^10.0.0",
-    "hardhat": "^2.10.1",
+    "hardhat": "^2.12.0",
     "hardhat-docgen": "^1.3.0",
     "hardhat-gas-reporter": "^1.0.4",
     "husky": "^7.0.2",
@@ -80,6 +79,7 @@
   ],
   "dependencies": {
     "@chainlink/contracts": "^0.3.1",
+    "@opengsn/provider": "^3.0.0-beta.1",
     "openzeppelin-solidity": "^4.4.2"
   }
 }
