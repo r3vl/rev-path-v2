@@ -54,10 +54,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     mapping(address => uint256) private currentTokenTier;
 
     // @notice Total token released from the revenue path for a given token address
-    mapping(address => uint256) private totalTokenReleased;
+    mapping(address => uint256) public totalTokenReleased;
 
     // @notice Total ERC20 accounted for the revenue path for a given token address
-    mapping(address => uint256) private totalTokenAccounted;
+    mapping(address => uint256) public totalTokenAccounted;
 
     /**  @notice For a given token & wallet address, the amount of the token that can been withdrawn by the wallet
     [token][wallet]*/
@@ -235,38 +235,48 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         presentTier = currentTokenTier[token];
         uint256 pendingAmount = (pathTokenBalance + totalTokenReleased[token]) - totalTokenAccounted[token];
 
-        uint256 currentTierDistribution = pendingAmount;
+        uint256 currentTierDistribution;
         uint256 nextTierDistribution;
         while (pendingAmount > 0) {
-            address[] memory walletMembers = revenueTiers[presentTier].walletList;
-            uint256 totalWallets = walletMembers.length;
-
             if (
-                totalDistributed[token][presentTier] + pendingAmount > tokenTierLimits[token][presentTier] &&
-                tokenTierLimits[token][presentTier] > 0
+                tokenTierLimits[token][presentTier] > 0 && (totalDistributed[token][presentTier] +
+                pendingAmount) > tokenTierLimits[token][presentTier]
             ) {
                 currentTierDistribution = tokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
                 nextTierDistribution = pendingAmount - currentTierDistribution;
+            } else {
+                currentTierDistribution = pendingAmount;
+                nextTierDistribution = 0;
             }
 
-            if (platformFee > 0 && feeRequired) {
-                uint256 feeDeduction = ((currentTierDistribution * platformFee) / BASE);
-                feeAccumulated[token] += feeDeduction;
-                currentTierDistribution -= feeDeduction;
-            }
-
-            for (uint256 i; i < totalWallets; ) {
-                tokenWithdrawable[token][walletMembers[i]] +=
-                    (currentTierDistribution * revenueProportion[presentTier][walletMembers[i]]) /
-                    BASE;
-                unchecked {
-                    i++;
+            if (currentTierDistribution > 0) {
+                address[] memory walletMembers = revenueTiers[presentTier].walletList;
+                uint256 totalWallets = walletMembers.length;
+                uint256 feeDeduction;
+                if (feeRequired && platformFee > 0) {
+                    feeDeduction = ((currentTierDistribution * platformFee) / BASE);
+                    feeAccumulated[token] += feeDeduction;
+                    currentTierDistribution -= feeDeduction;
                 }
-            }
 
-            pendingAmount -= currentTierDistribution;
-            emit TokenDistributed(token, currentTierDistribution, presentTier);
-            presentTier += 1;
+                for (uint256 i; i < totalWallets; ) {
+                    tokenWithdrawable[token][walletMembers[i]] +=
+                        ((currentTierDistribution * revenueProportion[presentTier][walletMembers[i]]) /
+                        BASE);
+                    unchecked {
+                        i++;
+                    }
+                }
+
+                totalTokenAccounted[token] += (currentTierDistribution + feeDeduction);
+                totalDistributed[token][presentTier] += (currentTierDistribution + feeDeduction);
+                emit TokenDistributed(token, currentTierDistribution, presentTier);
+            }
+            pendingAmount = nextTierDistribution;
+            if (nextTierDistribution > 0) {
+                presentTier += 1;
+                currentTokenTier[token] += 1;
+            }
         }
     }
 
@@ -596,7 +606,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         emit ERC20PaymentReleased(token, account, payment);
     }
 
-    /** @notice Get the limit amount & wallet list for a given revenue tier
+    /** @notice Get the wallet list for a given revenue tier
      * @param tierNumber the index of the tier for which list needs to be provided.
      */
     function getRevenueTier(uint256 tierNumber) external view returns (address[] memory _walletList) {
