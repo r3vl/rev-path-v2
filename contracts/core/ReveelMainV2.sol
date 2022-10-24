@@ -97,7 +97,8 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         pathInfo.factory = address(this);
         pathInfo.forwarder= getTrustedForwarder();
 
-        RevenuePathV2(libraryAddress).initialize(
+        RevenuePathV2 path = RevenuePathV2(payable(Clones.clone(libraryAddress)));
+        path.initialize(
             _walletList,
             _distribution,
             _tokenList,
@@ -105,7 +106,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
             pathInfo,
             _msgSender()
         );
-        emit RevenuePathCreated(RevenuePathV2(libraryAddress),_name);
+        emit RevenuePathCreated(path,_name);
     }
 
     /** @notice Sets the libaray contract address

@@ -2,7 +2,6 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { ReveelMainV2, ReveelMainV2__factory, RevenuePathV2, RevenuePathV2__factory } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { platform } from "os";
 import { BigNumberish, constants, Event } from "ethers";
 
 describe("ReveelMainV2", () => {
@@ -213,7 +212,7 @@ describe("ReveelMainV2", () => {
       const walletList = [[bob.address], [bob.address]];
       const distributionList = [[10000000], [10000000]];
       const tokenList = [constants.AddressZero];
-      const limitSequence: BigNumberish[][] = [[ethers.utils.parseEther("1")], []];
+      const limitSequence: BigNumberish[][] = [[ethers.utils.parseEther("1")]];
       const name = "Sample";
       const isImmutable = true;
       const revPath = await reveelMain.createRevenuePath(

@@ -218,6 +218,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *           FUNCTIONS           *
      ********************************/
 
+    // Function to receive Ether. msg.data must be empty
+    receive() external payable {}
+    
     /** @notice Called for a given token to distribute, unallocated tokens to the respective tiers and wallet members
      *  @param token The address of the token
      */
@@ -294,8 +297,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             });
         }
 
-        // TODO(appleseed): maybe should check this on every tier...
-        if (totalTiers > 1 && totalTokens != _limitSequence[0].length) {
+        if (totalTokens != _limitSequence.length) {
             revert TokensAndTierLimitMismatch({ tokenCount: totalTokens, limitListCount: _limitSequence.length });
         }
         for (uint256 i; i < totalTiers; ) {
@@ -594,7 +596,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         emit ERC20PaymentReleased(token, account, payment);
     }
 
-    /** @notice Get the limit amoutn & wallet list for a given revenue tier
+    /** @notice Get the limit amount & wallet list for a given revenue tier
      * @param tierNumber the index of the tier for which list needs to be provided.
      */
     function getRevenueTier(uint256 tierNumber) external view returns (address[] memory _walletList) {
