@@ -45,10 +45,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      */
     mapping(uint256 => mapping(address => uint256)) private revenueProportion;
 
-    // @notice Amount of token released for a given wallet [token][wallet]=> [amount]
+    // @notice Amount of token released for a given wallet [token][wallet]=>[amount]
     mapping(address => mapping(address => uint256)) private released;
 
-    //@notice ERC20 tier limits for given token address n tier
+    //@notice ERC20 tier limits for given token address and tier
     mapping(address => mapping(uint256 => uint256)) public tokenTierLimits;
 
     mapping(address => uint256) private currentTokenTier;
@@ -195,6 +195,11 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     error TokenLimitNotValid();
 
     /**
+     *  @dev Reverts when tier limit given is zero in certain cases
+     */
+    error TierLimitGivenZero();
+
+    /**
      * @dev Reverts when tier limit of a non-existant tier is attempted
      */
     error OnlyExistingTierLimitsCanBeUpdated();
@@ -289,7 +294,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             });
         }
 
-        if (totalTokens != _limitSequence.length) {
+        // TODO(appleseed): maybe should check this on every tier...
+        if (totalTiers > 1 && totalTokens != _limitSequence[0].length) {
             revert TokensAndTierLimitMismatch({ tokenCount: totalTokens, limitListCount: _limitSequence.length });
         }
         for (uint256 i; i < totalTiers; ) {
@@ -340,8 +346,14 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 if ((totalTiers - 1) != _limitSequence[k].length) {
                     revert TotalTierLimitsMismatch();
                 }
-
-                tokenTierLimits[token][m] = _limitSequence[k][m];
+                // set tier limits, except for final tier which has no limit
+                if (m != totalTiers - 1) {
+                    if (_limitSequence[k][m] == 0) {
+                        revert TierLimitGivenZero();
+                    }
+                    tokenTierLimits[token][m] = _limitSequence[k][m];
+                }
+                
                 unchecked {
                     m++;
                 }
@@ -496,7 +508,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
 
     /** @notice Update tier limits for given tokens for an existing tier
      * @param tokenList A list of tokens for which limits will be updated
-     *  @param newLimits A list of corresponding limits for the tokens
+     * @param newLimits A list of corresponding limits for the tokens
      * @param tier The tier for which limits are being updated
      */
     function updateLimits(

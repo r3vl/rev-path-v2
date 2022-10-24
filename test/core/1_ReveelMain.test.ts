@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { ReveelMainV2, ReveelMainV2__factory, RevenuePathV2, RevenuePathV2__factory } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { platform } from "os";
-import { BigNumberish, constants } from "ethers";
+import { BigNumberish, constants, Event } from "ethers";
 
 describe("ReveelMainV2", () => {
   let reveelMain: ReveelMainV2;
@@ -151,7 +151,7 @@ describe("ReveelMainV2", () => {
       await reveelMain.toggleContractState();
       expect(await reveelMain.paused()).to.be.equal(true);
       const walletList = [[bob.address]];
-      const distributionList = [[1000000]];
+      const distributionList = [[10000000]];
       const tokenList = [constants.AddressZero];
       const limitSequence: BigNumberish[][] = [[]];
       const name = "Sample";
@@ -167,29 +167,80 @@ describe("ReveelMainV2", () => {
     });
   });
 
-  // describe("deploy revenuePaths", () => {
-  //   beforeEach(async () => {
-  //     library = await (new RevenuePathV2__factory(owner)).deploy();
-  //     reveelMain = await (new ReveelMainV2__factory(owner)).deploy(
-  //       library.address,
-  //       platformFeePercentage,
-  //       platformWallet.address,
-  //       forwarder.address,
-  //     );
-  //   });
-  //   it("can deploy a RevenuePath", async () => {
+  describe("deploy revenuePaths", () => {
+    beforeEach(async () => {
+      library = await (new RevenuePathV2__factory(owner)).deploy();
+      reveelMain = await (new ReveelMainV2__factory(owner)).deploy(
+        library.address,
+        platformFeePercentage,
+        platformWallet.address,
+        forwarder.address,
+      );
+    });
+    it("can deploy a single tier RevenuePath", async () => {
+      const walletList = [[bob.address]];
+      const distributionList = [[10000000]];
+      const tokenList = [constants.AddressZero];
+      const limitSequence: BigNumberish[][] = [[]];
+      const name = "Sample";
+      const isImmutable = true;
+      const revPath = await reveelMain.createRevenuePath(
+        walletList,
+        distributionList,
+        tokenList,
+        limitSequence,
+        name,
+        isImmutable
+      )
+      // get the deployed RevPath & check it
+      const deployed = await revPath.wait();
+      const events = deployed.events as Event[];
+      const filteredEvents = events.filter((e) => e.event === "RevenuePathCreated");
+      // console.log("events", filteredEvents);
+      const deployedAddress = filteredEvents[0].args?.path;
+      const deployedName = filteredEvents[0].args?.name;
+      expect(deployedAddress).to.be.properAddress;
+      expect(deployedName).to.equal(name);
+      revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
+      expect(deployedAddress).to.equal(revenuePath.address);
+      expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
+      expect(await revenuePath.getImmutabilityStatus()).to.equal(isImmutable);
+      expect(await revenuePath.getTotalRevenueTiers()).to.equal(1);
+      expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
+    });
 
-  //     const walletList = 
-  //     await reveelMain.createRevenuePath(
-  //       walletList,
-  //       distributionList,
-  //       tokenList,
-  //       limitSequence,
-  //       name,
-  //       isImmutable
-  //     )
-      
-  //   });
-  // });
+    it("can deploy a multi tier RevenuePath", async () => {
+      const walletList = [[bob.address], [bob.address]];
+      const distributionList = [[10000000], [10000000]];
+      const tokenList = [constants.AddressZero];
+      const limitSequence: BigNumberish[][] = [[ethers.utils.parseEther("1")], []];
+      const name = "Sample";
+      const isImmutable = true;
+      const revPath = await reveelMain.createRevenuePath(
+        walletList,
+        distributionList,
+        tokenList,
+        limitSequence,
+        name,
+        isImmutable
+      )
+
+      // get the deployed RevPath & check it
+      const deployed = await revPath.wait();
+      const events = deployed.events as Event[];
+      const filteredEvents = events.filter((e) => e.event === "RevenuePathCreated");
+      // console.log("events", filteredEvents);
+      const deployedAddress = filteredEvents[0].args?.path;
+      const deployedName = filteredEvents[0].args?.name;
+      expect(deployedAddress).to.be.properAddress;
+      expect(deployedName).to.equal(name);
+      revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
+      expect(deployedAddress).to.equal(revenuePath.address);
+      expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
+      expect(await revenuePath.getImmutabilityStatus()).to.equal(isImmutable);
+      expect(await revenuePath.getTotalRevenueTiers()).to.equal(2);
+      expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
+    });
+  });
 
 });

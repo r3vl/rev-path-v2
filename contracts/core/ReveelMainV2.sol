@@ -21,6 +21,11 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     /********************************
      *           EVENTS              *
      ********************************/
+    /** @notice Emits when a new revenue path is created
+     * @param path The address of the new revenue path
+     */
+    event RevenuePathCreated(RevenuePathV2 indexed path, string name);
+
     /** @notice Updates the libaray contract address
      * @param newLibrary The address of the library contract
      */
@@ -100,6 +105,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
             pathInfo,
             _msgSender()
         );
+        emit RevenuePathCreated(RevenuePathV2(libraryAddress),_name);
     }
 
     /** @notice Sets the libaray contract address
