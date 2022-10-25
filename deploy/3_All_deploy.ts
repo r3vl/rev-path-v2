@@ -1,23 +1,12 @@
 import hre from "hardhat";
+import { platformWalletLookup } from "./Address_Constants";
 /**
  * deploys a RevenuePath library & a ReveelMain factory
  */
 async function main() {
 
   // 1. set your wallet
-  let platformWallet = "";
-  switch (process.env.HARDHAT_NETWORK) {
-    case "mainnet":
-      platformWallet = "0xCB3B18f69da0f12d25EC85AACed53911e61ad386";
-      break;
-    case "goerli":
-      platformWallet = "0x9a66DC388ac88815B964E6829041F3997FA0b76D";
-      break
-    default:
-      // enter your platform wallet here:
-      platformWallet = "0x9a66DC388ac88815B964E6829041F3997FA0b76D";
-      if (platformWallet === "") throw new Error(`you need to set a platform wallet on network: ${process.env.HARDHAT_NETWORK}`);
-  }
+  const platformWallet = platformWalletLookup();
 
   // 2. deploy library
   const RevenuePath = await hre.ethers.getContractFactory("RevenuePathV2");
