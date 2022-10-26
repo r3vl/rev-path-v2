@@ -240,6 +240,117 @@ describe("ReveelMainV2", () => {
       expect(await revenuePath.getTotalRevenueTiers()).to.equal(2);
       expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
     });
+
+    it("can deploy a single tier RevenuePath with multiple tokens (incl'ing ERC20s)", async () => {
+      const walletList = [[bob.address]];
+      const distributionList = [[10000000]];
+      // addressZero represents ETH, 2nd element is DAI, 3rd is USDC
+      const tokenList = [constants.AddressZero, "0x6B175474E89094C44Da98b954EedeAC495271d0F", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"];
+      // limit sequence - no limit on all three tokens, so we pass three empty arrays
+      const limitSequence: BigNumberish[][] = [[], [], []];
+      const name = "Sample";
+      const isImmutable = true;
+      const revPath = await reveelMain.createRevenuePath(
+        walletList,
+        distributionList,
+        tokenList,
+        limitSequence,
+        name,
+        isImmutable
+      )
+      // get the deployed RevPath & check it
+      const deployed = await revPath.wait();
+      const events = deployed.events as Event[];
+      const filteredEvents = events.filter((e) => e.event === "RevenuePathCreated");
+      // console.log("events", filteredEvents);
+      const deployedAddress = filteredEvents[0].args?.path;
+      const deployedName = filteredEvents[0].args?.name;
+      expect(deployedAddress).to.be.properAddress;
+      expect(deployedName).to.equal(name);
+      revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
+      expect(deployedAddress).to.equal(revenuePath.address);
+      expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
+      expect(await revenuePath.getImmutabilityStatus()).to.equal(isImmutable);
+      expect(await revenuePath.getTotalRevenueTiers()).to.equal(1);
+      expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
+    });
+
+    it("can deploy a multi tier RevenuePath with multiple tokens (incl'ing ERC20s)", async () => {
+      const walletList = [[bob.address], [bob.address]];
+      const distributionList = [[10000000], [10000000]];
+      // addressZero represents ETH, 2nd element is DAI, 3rd is USDC
+      // ETH has 18 decimals, DAI has 18 decimals, USDC has 6 decimals
+      const tokenList = [constants.AddressZero, "0x6B175474E89094C44Da98b954EedeAC495271d0F", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"];
+      // tier 1 has 1 ETH limit for ETH, has 10 DAI limit for DAI, 10 USDC limit for USDC
+      const limitSequence: BigNumberish[][] = [[ethers.utils.parseEther("1")], [ethers.utils.parseUnits("10", 18)], [ethers.utils.parseUnits("10", 6)]];
+      const name = "Sample";
+      const isImmutable = true;
+      const revPath = await reveelMain.createRevenuePath(
+        walletList,
+        distributionList,
+        tokenList,
+        limitSequence,
+        name,
+        isImmutable
+      )
+      // get the deployed RevPath & check it
+      const deployed = await revPath.wait();
+      const events = deployed.events as Event[];
+      const filteredEvents = events.filter((e) => e.event === "RevenuePathCreated");
+      // console.log("events", filteredEvents);
+      const deployedAddress = filteredEvents[0].args?.path;
+      const deployedName = filteredEvents[0].args?.name;
+      expect(deployedAddress).to.be.properAddress;
+      expect(deployedName).to.equal(name);
+      revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
+      expect(deployedAddress).to.equal(revenuePath.address);
+      expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
+      expect(await revenuePath.getImmutabilityStatus()).to.equal(isImmutable);
+      expect(await revenuePath.getTotalRevenueTiers()).to.equal(2);
+      expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
+    });
+
+    it("can deploy a three tier RevenuePath with multiple tokens (incl'ing ERC20s)", async () => {
+      const walletList = [[bob.address], [bob.address], [bob.address, alex.address]];
+      const distributionList = [[10000000], [10000000], [5000000, 5000000]];
+      // addressZero represents ETH, 2nd element is DAI, 3rd is USDC
+      // ETH has 18 decimals, DAI has 18 decimals, USDC has 6 decimals
+      const tokenList = [constants.AddressZero, "0x6B175474E89094C44Da98b954EedeAC495271d0F", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"];
+      // , has 10 DAI limit for DAI, 10 USDC limit for USDC
+      const limitSequence: BigNumberish[][] = [
+        // tier 1 has 1 ETH limit, tier 2 has a 0.5 ETH limit, tier 3 is infinite (blank)
+        [ethers.utils.parseEther("1"), ethers.utils.parseEther("0.5")],
+        // tier 1 has a 10 DAI limit, tier 2 has a 1000 DAI limit, tier 3 is infinite (blank)
+        [ethers.utils.parseUnits("10", 18), ethers.utils.parseUnits("1000", 18)],
+        // tier 1 has a 10 USDC limit, tier 2 has a 1000 USDC limit, tier 3 is infinite (blank)
+        [ethers.utils.parseUnits("10", 6), ethers.utils.parseUnits("1000", 6)]
+      ];
+      const name = "Sample";
+      const isImmutable = true;
+      const revPath = await reveelMain.createRevenuePath(
+        walletList,
+        distributionList,
+        tokenList,
+        limitSequence,
+        name,
+        isImmutable
+      )
+      // get the deployed RevPath & check it
+      const deployed = await revPath.wait();
+      const events = deployed.events as Event[];
+      const filteredEvents = events.filter((e) => e.event === "RevenuePathCreated");
+      // console.log("events", filteredEvents);
+      const deployedAddress = filteredEvents[0].args?.path;
+      const deployedName = filteredEvents[0].args?.name;
+      expect(deployedAddress).to.be.properAddress;
+      expect(deployedName).to.equal(name);
+      revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
+      expect(deployedAddress).to.equal(revenuePath.address);
+      expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
+      expect(await revenuePath.getImmutabilityStatus()).to.equal(isImmutable);
+      expect(await revenuePath.getTotalRevenueTiers()).to.equal(2);
+      expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
+    });
   });
 
 });
