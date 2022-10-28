@@ -17,11 +17,12 @@ describe("ReveelMainV2", () => {
   let tirtha: SignerWithAddress;
   let platformWallet: SignerWithAddress;
   let forwarder: SignerWithAddress;
+  let secondForwarder: SignerWithAddress;
 
   let platformFeePercentage: number;
 
   before(async () => {
-    [owner, alex, bob, tracy, kim, tirtha, platformWallet, forwarder] = await ethers.getSigners();
+    [owner, alex, bob, tracy, kim, tirtha, platformWallet, forwarder,secondForwarder] = await ethers.getSigners();
   
     // ReveelMainV2 = await ethers.getContractFactory("ReveelMainV2");
     // RevenuePathV2 = await ethers.getContractFactory("RevenuePathV2");
@@ -75,6 +76,18 @@ describe("ReveelMainV2", () => {
       );
     });
 
+    it("Reverts when platform fee is greater than base", async () => {
+      await expect ((new ReveelMainV2__factory(owner)).deploy(
+        library.address,
+        1e8,
+        platformWallet.address,
+        forwarder.address,
+      )).to.be.revertedWithCustomError(
+        reveelMain,
+        "PlatformFeeNotAppropriate",
+      );
+    });
+
     // PLATFORM FEE
     it("Sets new platform fee", async () => {
       const newFee = 2000;
@@ -96,6 +109,13 @@ describe("ReveelMainV2", () => {
         "Ownable: caller is not the owner",
       );
       expect(await reveelMain.getPlatformFee()).to.equal(existingFee);
+    });
+
+    it("Reverts if new platform fee is greater than base", async () => {
+      await expect(reveelMain.setPlatformFee(100000000)).to.be.revertedWithCustomError(
+        reveelMain,
+        "PlatformFeeNotAppropriate",
+      );
     });
   
     // LIBRARY ADDRESS
@@ -146,6 +166,13 @@ describe("ReveelMainV2", () => {
       await reveelMain.toggleContractState();
       expect(await reveelMain.paused()).to.be.equal(true);
     });
+
+    it("can unpause from paused state", async () => {
+      await reveelMain.toggleContractState();
+      await reveelMain.toggleContractState();
+      expect(await reveelMain.paused()).to.be.equal(false);
+    });
+
     it("cannot createRevenuePath when paused", async () => {
       await reveelMain.toggleContractState();
       expect(await reveelMain.paused()).to.be.equal(true);
@@ -164,6 +191,19 @@ describe("ReveelMainV2", () => {
         isImmutable
       )).to.be.revertedWith("Pausable: paused");
     });
+
+    it("Set new trusted forwarder address", async () => {
+      await reveelMain.setTrustedForwarder(secondForwarder.address);
+      
+      expect(await reveelMain.getTrustedForwarder()).to.be.equal(secondForwarder.address);
+    });
+
+    it("Reverts for ownership relinquishment", async () => {
+      
+     await expect(reveelMain.renounceOwnership()).to.be.reverted;
+    });
+
+
   });
 
   describe("deploy revenuePaths", () => {
@@ -348,7 +388,7 @@ describe("ReveelMainV2", () => {
       expect(deployedAddress).to.equal(revenuePath.address);
       expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
       expect(await revenuePath.getImmutabilityStatus()).to.equal(isImmutable);
-      expect(await revenuePath.getTotalRevenueTiers()).to.equal(2);
+      expect(await revenuePath.getTotalRevenueTiers()).to.equal(3);
       expect(await revenuePath.getCurrentTier(constants.AddressZero)).to.equal(0);
     });
   });
