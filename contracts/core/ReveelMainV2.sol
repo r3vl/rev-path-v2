@@ -70,7 +70,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
             revert ZeroAddressProvided();
         }
 
-        if (platformFee > BASE) {
+        if (_platformFee > BASE) {
             revert PlatformFeeNotAppropriate();
         }
         libraryAddress = _libraryAddress;
@@ -124,7 +124,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      * @param newFeePercentage The new fee percentage
      */
     function setPlatformFee(uint88 newFeePercentage) external onlyOwner {
-        if (platformFee > BASE) {
+        if (newFeePercentage > BASE) {
             revert PlatformFeeNotAppropriate();
         }
         platformFee = newFeePercentage;
