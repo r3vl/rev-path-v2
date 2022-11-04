@@ -230,15 +230,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param token The address of the token
      */
     function distrbutePendingTokens(address token) public {
-        uint256 pathTokenBalance;
         uint256 presentTier;
-        if (token == address(0)) {
-            pathTokenBalance = address(this).balance;
-        } else {
-            pathTokenBalance = IERC20(token).balanceOf(address(this));
-        }
-        presentTier = currentTokenTier[token];
-        uint256 pendingAmount = (pathTokenBalance + totalTokenReleased[token]) - totalTokenAccounted[token];
+        uint256 pendingAmount = getPendingDistributionAmount(token);
 
         uint256 currentTierDistribution;
         uint256 nextTierDistribution;
@@ -282,6 +275,20 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 currentTokenTier[token] += 1;
             }
         }
+    }
+
+
+    /** @notice Get the token amount that has not been allocated for in the revenue path
+     */
+    function getPendingDistributionAmount(address token) public view returns (uint256) {
+        uint256 pathTokenBalance;
+        if (token == address(0)) {
+            pathTokenBalance = address(this).balance;
+        } else {
+            pathTokenBalance = IERC20(token).balanceOf(address(this));
+        }
+        uint256 pendingAmount = (pathTokenBalance + totalTokenReleased[token]) - totalTokenAccounted[token];
+        return pendingAmount;
     }
 
     /** @notice Initializes revenue path
@@ -545,7 +552,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         }
 
         for (uint256 i; i < listCount; ) {
-            if (totalTokenReleased[tokenList[i]] > newLimits[i]) {
+            if (totalDistributed[tokenList[i]][tier] > newLimits[i]) {
                 revert TokenLimitNotValid();
             }
             tokenTierLimits[tokenList[i]][tier] = newLimits[i];
@@ -679,18 +686,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         return released[token][account];
     }
 
-    /** @notice Get the token amount that has not been allocated for in the revenue path
-     */
-    function getPendingDistributionAmount(address token) external view returns (uint256) {
-        uint256 pathTokenBalance;
-        if (token == address(0)) {
-            pathTokenBalance = address(this).balance;
-        } else {
-            pathTokenBalance = IERC20(token).balanceOf(address(this));
-        }
-        uint256 pendingAmount = (pathTokenBalance + totalTokenReleased[token]) - totalTokenAccounted[token];
-        return pendingAmount;
-    }
 
     /** @notice Update the trusted forwarder address
      *
