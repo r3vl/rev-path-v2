@@ -317,7 +317,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     await revenuePath.distrbutePendingTokens(constants.AddressZero);
     // await revenuePath.release(constants.AddressZero, bob.address);
 
-    const totalAccounted = await revenuePath.totalTokenAccounted(token);
+    const totalAccounted = await revenuePath.getTotalTokenAccounted(token);
     expect(balance).to.equal(totalAccounted);
     expect(pending).to.equal(totalAccounted);
 
@@ -341,7 +341,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     await revenuePath.distrbutePendingTokens(constants.AddressZero);
     // await revenuePath.release(constants.AddressZero, bob.address);
 
-    const totalAccounted = await revenuePath.totalTokenAccounted(token);
+    const totalAccounted = await revenuePath.getTotalTokenAccounted(token);
     expect(balance).to.equal(totalAccounted);
     expect(pending).to.equal(totalAccounted);
 
@@ -363,7 +363,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     await revenuePath.distrbutePendingTokens(constants.AddressZero);
     // // await revenuePath.release(constants.AddressZero, bob.address);
 
-    const totalAccounted2 = await revenuePath.totalTokenAccounted(token);
+    const totalAccounted2 = await revenuePath.getTotalTokenAccounted(token);
     expect(balance2).to.equal(totalAccounted2);
 
     const newPending2 = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
@@ -388,7 +388,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     await revenuePath.distrbutePendingTokens(constants.AddressZero);
     const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
 
-    const totalAccounted = await revenuePath.totalTokenAccounted(token);
+    const totalAccounted = await revenuePath.getTotalTokenAccounted(token);
     expect(balance).to.equal(totalAccounted);
     expect(pending).to.equal(totalAccounted);
     // distribute again
@@ -437,8 +437,8 @@ describe("RevenuePath: Update paths & receive monies", function () {
     const presentTier = await revenuePath.getCurrentTier(token);
     console.log("presentTier", presentTier);
     // currentTierDistribution
-    // const currentTierDistribution = tokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
-    const currentTierLimit = await revenuePath.tokenTierLimits(token, presentTier);
+    // const currentTierDistribution = getTokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
+    const currentTierLimit = await revenuePath.getTokenTierLimits(token, presentTier);
     const totalDistributedOnTier = await revenuePath.getTierDistributedAmount(token, presentTier);
     console.log("distributed...", currentTierLimit, totalDistributedOnTier);
     const currentTierDistribution = currentTierLimit.sub(totalDistributedOnTier);
@@ -472,7 +472,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     // tokenWithdrawable[token][walletMembers[i]] +=
     //                 (currentTierDistribution * revenueProportion[presentTier][walletMembers[i]]) /
     //                 BASE;
-    const tokenWithdrawable = await revenuePath.tokenWithdrawable(token, walletMembers[0]);
+    const tokenWithdrawable = await revenuePath.getWithdrawableToken(token, walletMembers[0]);
     console.log("tokenWithdrawable", tokenWithdrawable);
 
     // revenueProportion[presentTier][walletMembers[i]]
@@ -493,7 +493,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
     console.log("new", newPending);
 
-    const totalAccounted = await revenuePath.totalTokenAccounted(token);
+    const totalAccounted = await revenuePath.getTotalTokenAccounted(token);
     console.log("totalAccounted", totalAccounted);
 
   });
@@ -510,11 +510,11 @@ describe("RevenuePath: Update paths & receive monies", function () {
   });
 
   it("should update limits for a given tier", async () => {
-    const originalLimits = await revenuePath.tokenTierLimits(constants.AddressZero, 0)
+    const originalLimits = await revenuePath.getTokenTierLimits(constants.AddressZero, 0)
     const updateTx = await revenuePath.updateLimits([constants.AddressZero], [ethers.utils.parseEther("11")], 0);
     await updateTx.wait();
 
-    const limits = await revenuePath.tokenTierLimits(constants.AddressZero, 0)
+    const limits = await revenuePath.getTokenTierLimits(constants.AddressZero, 0)
     expect(limits).to.not.equal(originalLimits);
     expect(limits).to.equal(ethers.utils.parseEther("11"));
   });
@@ -534,7 +534,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
   });
 
   it("Allows tier limit updates after receiving tokens but before distribution", async () => {
-    const originalLimits = await revenuePath.tokenTierLimits(constants.AddressZero, 0)
+    const originalLimits = await revenuePath.getTokenTierLimits(constants.AddressZero, 0)
     const tx = await owner.sendTransaction({
       to: revenuePath.address,
       value: ethers.utils.parseEther("1"),
@@ -543,7 +543,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
 
     const newTierLimit = ethers.utils.parseEther("1.4");
     await revenuePath.updateLimits([constants.AddressZero], [newTierLimit], 0)
-    const limits = await revenuePath.tokenTierLimits(constants.AddressZero, 0)
+    const limits = await revenuePath.getTokenTierLimits(constants.AddressZero, 0)
     expect(limits).to.not.equal(originalLimits);
     expect(limits).to.equal(newTierLimit);
   });

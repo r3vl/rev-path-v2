@@ -49,19 +49,19 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     mapping(address => mapping(address => uint256)) private released;
 
     //@notice ERC20 tier limits for given token address and tier
-    mapping(address => mapping(uint256 => uint256)) public tokenTierLimits;
+    mapping(address => mapping(uint256 => uint256)) private tokenTierLimits;
 
     mapping(address => uint256) private currentTokenTier;
 
     // @notice Total token released from the revenue path for a given token address
-    mapping(address => uint256) public totalTokenReleased;
+    mapping(address => uint256) private totalTokenReleased;
 
     // @notice Total ERC20 accounted for the revenue path for a given token address
-    mapping(address => uint256) public totalTokenAccounted;
+    mapping(address => uint256) private totalTokenAccounted;
 
     /**  @notice For a given token & wallet address, the amount of the token that can been withdrawn by the wallet
     [token][wallet]*/
-    mapping(address => mapping(address => uint256)) public tokenWithdrawable;
+    mapping(address => mapping(address => uint256)) private tokenWithdrawable;
 
     // @notice Total amount of token distributed for a given tier at that time.
     //[token][tier]-> [distributed amount]
@@ -697,6 +697,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         return released[token][account];
     }
 
+    function getTokenTierLimits(address token, uint256 tier) external view returns (uint256){
+       return tokenTierLimits[token][tier];
+    }
+
 
     /** @notice Update the trusted forwarder address
      *
@@ -705,9 +709,42 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         _setTrustedForwarder(forwarder);
     }
 
+    /**
+     *  @notice Total wallets available in a tier
+     */
     function getTierWalletCount(uint256 tier) external view returns (uint256) {
         return revenueTiers[tier].walletList.length;
     }
+
+    /**
+     * @notice Returns total token released
+     */
+    function getTotalTokenReleased(address token) external view returns(uint256){
+        
+        return totalTokenReleased[token];
+    }
+
+    /**
+     * @notice Returns total token accounted for a given token address
+     */
+    function getTotalTokenAccounted(address token) external view returns(uint256){
+        
+        return totalTokenAccounted[token];
+    }
+
+    /**
+     * @notice Returns withdrawable or claimable token amount for a given wallet in the revenue path
+     */
+    function getWithdrawableToken(address token,address wallet) external view returns(uint256){
+        
+        return tokenWithdrawable[token][wallet];
+
+    }
+
+    function getMainFactory()external view returns(address){
+        return mainFactory;
+    }
+    
 
     /** @notice Transfer handler for ETH
      * @param recipient The address of the receiver
