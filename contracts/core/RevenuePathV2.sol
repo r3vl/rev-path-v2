@@ -472,7 +472,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         uint256[][] calldata _distribution,
         uint256[] calldata _tierNumbers
     ) external isAllowed onlyOwner {
-        if (_walletList.length != _distribution.length) {
+
+        uint256 totalUpdates = _tierNumbers.length;
+        if (_walletList.length != _distribution.length && _walletList.length != totalUpdates ) {
             revert WalletAndDistrbtionCtMismatch({
                 walletCount: _walletList.length,
                 distributionCount: _distribution.length
@@ -480,7 +482,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         }
 
         uint256 totalTiers = revenueTiers.length;
-        uint256 totalUpdates = _tierNumbers.length;
 
         for (uint256 i; i < totalUpdates; ) {
             uint256 totalWallets = _walletList[i].length;
