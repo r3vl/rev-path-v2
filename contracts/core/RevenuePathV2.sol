@@ -576,7 +576,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @param token The token address
      * @param account The address of the receiver
      */
-    function release(address token, address payable account) external {
+    function release(address token, address payable account) external nonReentrant  {
         distrbutePendingTokens(token);
         uint256 payment = tokenWithdrawable[token][account];
             if (payment == 0) {
