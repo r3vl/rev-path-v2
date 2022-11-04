@@ -92,13 +92,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *           EVENTS              *
      ********************************/
 
-    /** @notice Emits when incoming ETH is distributed among members
-     * @param amount The amount of eth that has been distributed in a tier
-     * @param distributionTier the tier index at which the distribution is being done.
-     * @param walletList the list of wallet addresses for which ETH has been distributed
-     */
-    event EthDistributed(uint256 indexed amount, uint256 indexed distributionTier, address[] walletList);
-
     /** @notice Emits when token payment is withdrawn/claimed by a member
      * @param account The wallet for which ETH has been claimed for
      * @param payment The amount of ETH that has been paid out to the wallet
@@ -118,6 +111,20 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param tier The tier for which the distribution occured
      */
     event TokenDistributed(address indexed token, uint256 indexed amount, uint256 indexed tier);
+
+    /**
+     *  @notice Emits when fee is distributed
+     *  @param token The token address. Address 0 for native gas token like ETH
+     *  @param amount The amount of fee deducted
+     */
+    event FeeDistributed(address indexed token, uint256 indexed amount);
+
+    /**
+     *  @notice Emits when fee is released
+     *  @param token The token address. Address 0 for native gas token like ETH
+     *  @param amount The amount of fee released
+     */
+    event FeeReleased(address indexed token, uint256 indexed amount);
 
     /********************************
      *           MODIFIERS          *
@@ -255,6 +262,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                     feeDeduction = ((currentTierDistribution * platformFee) / BASE);
                     feeAccumulated[token] += feeDeduction;
                     currentTierDistribution -= feeDeduction;
+                    emit FeeDistributed(token,feeDeduction);
                 }
 
                 for (uint256 i; i < totalWallets; ) {
@@ -588,6 +596,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 totalTokenReleased[token] += value;
                 platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
                 sendValue(payable(platformFeeWallet), value);
+                emit FeeReleased(token,value);
             }
 
             sendValue(account, payment);
@@ -600,6 +609,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 totalTokenReleased[token] += value;
                 platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
                 IERC20(token).safeTransfer(platformFeeWallet, value);
+                emit FeeReleased(token,value);
             }
 
             IERC20(token).safeTransfer(account, payment);
