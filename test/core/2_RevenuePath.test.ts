@@ -320,7 +320,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     const totalAccounted = await revenuePath.totalTokenAccounted(token);
     expect(balance).to.equal(totalAccounted);
     expect(pending).to.equal(totalAccounted);
-    
+
     const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
 
     expect(newPending).to.equal(0);
@@ -344,7 +344,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     const totalAccounted = await revenuePath.totalTokenAccounted(token);
     expect(balance).to.equal(totalAccounted);
     expect(pending).to.equal(totalAccounted);
-    
+
     const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
 
     expect(newPending).to.equal(0);
@@ -365,7 +365,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
 
     const totalAccounted2 = await revenuePath.totalTokenAccounted(token);
     expect(balance2).to.equal(totalAccounted2);
-    
+
     const newPending2 = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
 
     expect(newPending2).to.equal(0);
@@ -450,7 +450,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     const platformFee = await revenuePath.getPlatformFee();
     const base = await revenuePath.BASE();
     console.log("platformFee", platformFee, base);
-    
+
     // feeDeduction = ((currentTierDistribution * platformFee) / BASE);
     const feeDeduction = ((currentTierDistribution.mul(platformFee)).div(base));
     console.log("feeDeduction", feeDeduction);
@@ -519,6 +519,20 @@ describe("RevenuePath: Update paths & receive monies", function () {
     expect(limits).to.equal(ethers.utils.parseEther("11"));
   });
 
+  it("Reverts when final tier limit is attempted for update", async () => {
+    const totalTiers:any = await revenuePath.getTotalRevenueTiers();
+    
+
+    await expect(revenuePath.updateLimits(
+      [constants.AddressZero], 
+      [ethers.utils.parseEther("11")], 
+      totalTiers - 1)).to.revertedWithCustomError(
+      revenuePath,
+      "FinalTierLimitNotUpdatable",
+    );
+       
+  });
+
   it("Allows tier limit updates after receiving tokens but before distribution", async () => {
     const originalLimits = await revenuePath.tokenTierLimits(constants.AddressZero, 0)
     const tx = await owner.sendTransaction({
@@ -538,7 +552,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     beforeEach(async () => {
       [owner, alex, bob, tracy, kim, tirtha, platformWallet, platformWallet1, forwarder] = await ethers.getSigners();
       platformFeePercentage = 100000;
-  
+
       library = await (new RevenuePathV2__factory(owner)).deploy();
       reveelMain = await (new ReveelMainV2__factory(owner)).deploy(
         library.address,
@@ -547,7 +561,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
         forwarder.address,
       );
       simpleToken = await (new SimpleToken__factory(owner)).deploy();
-  
+
       const { tiers, distributionLists, tokenList, limitSequence } = pathInitializerFixture();
       isImmutable = false;
       const revPath = await reveelMain.createRevenuePath(
@@ -566,31 +580,31 @@ describe("RevenuePath: Update paths & receive monies", function () {
       deployedAddress = filteredEvents[0].args?.path;
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
     });
-  
+
     it("ERC20 release is successful ", async () => {
       const prevBalance = await simpleToken.balanceOf(bob.address);
       const tx = await simpleToken.transfer(revenuePath.address, ethers.utils.parseEther("1000"));
       await tx.wait();
-  
+
       const releaseFund = await revenuePath.releaseERC20(simpleToken.address, bob.address);
       await releaseFund.wait();
-  
+
       const contractReleased = await revenuePath.getTokenReleased(simpleToken.address, bob.address);
       const currBalance = await simpleToken.balanceOf(bob.address);
       expect(prevBalance.add(contractReleased)).to.be.equal(currBalance);
     });
-    
+
     it("Reverts ERC20 release if there is no revenue ", async () => {
       const tx = await simpleToken.transfer(revenuePath.address, ethers.utils.parseEther("1000"));
       await tx.wait();
-      
+
       const releaseFund = await revenuePath.releaseERC20(simpleToken.address, bob.address);
       await releaseFund.wait();
-  
+
       await expect(revenuePath.releaseERC20(simpleToken.address, bob.address)).to.revertedWithCustomError(
         revenuePath,
         "InsufficientWithdrawalBalance",
       );
-    });  
+    });
   });
 });

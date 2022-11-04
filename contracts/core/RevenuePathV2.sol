@@ -214,6 +214,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      */
     error TotalTierLimitsMismatch();
 
+    /**
+     * @dev Reverts when final tier is attempted for updates
+     */
+    error FinalTierLimitNotUpdatable();
     /********************************
      *           FUNCTIONS           *
      ********************************/
@@ -529,12 +533,17 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         uint256 tier
     ) external isAllowed onlyOwner {
         uint256 listCount = tokenList.length;
+        uint256 totalTiers = revenueTiers.length;
 
         if (listCount != newLimits.length) {
             revert TokensAndTierLimitMismatch({ tokenCount: listCount, limitListCount: newLimits.length });
         }
-        if (tier >= revenueTiers.length) {
+        if (tier >= totalTiers ) {
             revert OnlyExistingTierLimitsCanBeUpdated();
+        }
+
+        if(tier == totalTiers - 1){
+            revert FinalTierLimitNotUpdatable();
         }
 
         for (uint256 i; i < listCount; ) {
