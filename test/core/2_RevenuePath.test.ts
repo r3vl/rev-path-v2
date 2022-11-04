@@ -586,7 +586,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
       const tx = await simpleToken.transfer(revenuePath.address, ethers.utils.parseEther("1000"));
       await tx.wait();
 
-      const releaseFund = await revenuePath.releaseERC20(simpleToken.address, bob.address);
+      const releaseFund = await revenuePath.release(simpleToken.address, bob.address);
       await releaseFund.wait();
 
       const contractReleased = await revenuePath.getTokenReleased(simpleToken.address, bob.address);
@@ -598,10 +598,10 @@ describe("RevenuePath: Update paths & receive monies", function () {
       const tx = await simpleToken.transfer(revenuePath.address, ethers.utils.parseEther("1000"));
       await tx.wait();
 
-      const releaseFund = await revenuePath.releaseERC20(simpleToken.address, bob.address);
+      const releaseFund = await revenuePath.release(simpleToken.address, bob.address);
       await releaseFund.wait();
 
-      await expect(revenuePath.releaseERC20(simpleToken.address, bob.address)).to.revertedWithCustomError(
+      await expect(revenuePath.release(simpleToken.address, bob.address)).to.revertedWithCustomError(
         revenuePath,
         "InsufficientWithdrawalBalance",
       );

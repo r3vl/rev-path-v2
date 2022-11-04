@@ -218,13 +218,14 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @dev Reverts when final tier is attempted for updates
      */
     error FinalTierLimitNotUpdatable();
+
     /********************************
      *           FUNCTIONS           *
      ********************************/
 
     // Function to receive Ether. msg.data must be empty
     receive() external payable {}
-    
+
     /** @notice Called for a given token to distribute, unallocated tokens to the respective tiers and wallet members
      *  @param token The address of the token
      */
@@ -243,8 +244,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         uint256 nextTierDistribution;
         while (pendingAmount > 0) {
             if (
-                tokenTierLimits[token][presentTier] > 0 && (totalDistributed[token][presentTier] +
-                pendingAmount) > tokenTierLimits[token][presentTier]
+                tokenTierLimits[token][presentTier] > 0 &&
+                (totalDistributed[token][presentTier] + pendingAmount) > tokenTierLimits[token][presentTier]
             ) {
                 currentTierDistribution = tokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
                 nextTierDistribution = pendingAmount - currentTierDistribution;
@@ -264,9 +265,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 }
 
                 for (uint256 i; i < totalWallets; ) {
-                    tokenWithdrawable[token][walletMembers[i]] +=
-                        ((currentTierDistribution * revenueProportion[presentTier][walletMembers[i]]) /
-                        BASE);
+                    tokenWithdrawable[token][walletMembers[i]] += ((currentTierDistribution *
+                        revenueProportion[presentTier][walletMembers[i]]) / BASE);
                     unchecked {
                         i++;
                     }
@@ -301,7 +301,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         PathInfo memory pathInfo,
         address _owner
     ) external initializer {
-
         uint256 totalTiers = _walletList.length;
         uint256 totalTokens = _tokenList.length;
         if (totalTiers != _distribution.length) {
@@ -369,7 +368,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                     }
                     tokenTierLimits[token][m] = _limitSequence[k][m];
                 }
-                
+
                 unchecked {
                     m++;
                 }
@@ -400,7 +399,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         isAllowed
         onlyOwner
     {
-
         if (_walletList.length != _distribution.length) {
             revert WalletAndDistrbtionCtMismatch({
                 walletCount: _walletList.length,
@@ -538,11 +536,11 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         if (listCount != newLimits.length) {
             revert TokensAndTierLimitMismatch({ tokenCount: listCount, limitListCount: newLimits.length });
         }
-        if (tier >= totalTiers ) {
+        if (tier >= totalTiers) {
             revert OnlyExistingTierLimitsCanBeUpdated();
         }
 
-        if(tier == totalTiers - 1){
+        if (tier == totalTiers - 1) {
             revert FinalTierLimitNotUpdatable();
         }
 
@@ -558,61 +556,48 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         }
     }
 
-    /** @notice Releases distribute token via native transfer
+    /** @notice Releases distribute token
      * @param token The token address
      * @param account The address of the receiver
      */
     function release(address token, address payable account) external {
         distrbutePendingTokens(token);
-
         uint256 payment = tokenWithdrawable[token][account];
-        if (payment == 0) {
-            revert InsufficientWithdrawalBalance();
+            if (payment == 0) {
+                revert InsufficientWithdrawalBalance();
+            }
+                    
+            released[token][account] += payment;
+            totalTokenReleased[token] += payment;
+            tokenWithdrawable[token][account] = 0;
+
+        if (token == address(0)) {
+
+
+            if (feeAccumulated[token] > 0) {
+                uint256 value = feeAccumulated[token];
+                feeAccumulated[token] = 0;
+                totalTokenReleased[token] += value;
+                platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
+                sendValue(payable(platformFeeWallet), value);
+            }
+
+            sendValue(account, payment);
+            emit PaymentReleased(account, token, payment);
+        } else {
+
+            if (feeAccumulated[token] > 0) {
+                uint256 value = feeAccumulated[token];
+                feeAccumulated[token] = 0;
+                totalTokenReleased[token] += value;
+                platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
+                IERC20(token).safeTransfer(platformFeeWallet, value);
+            }
+
+            IERC20(token).safeTransfer(account, payment);
+
+            emit ERC20PaymentReleased(token, account, payment);
         }
-
-        released[token][account] += payment;
-        totalTokenReleased[token] += payment;
-        tokenWithdrawable[token][account] = 0;
-
-        if (feeAccumulated[token] > 0) {
-            uint256 value = feeAccumulated[token];
-            feeAccumulated[token] = 0;
-            totalTokenReleased[token] += value;
-            platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
-            sendValue(payable(platformFeeWallet), value);
-        }
-
-        sendValue(account, payment);
-        emit PaymentReleased(account, token, payment);
-    }
-
-    /** @notice Releases allocated ERC20 for the provided address
-     * @param token The address of the ERC20 token
-     * @param account The member's wallet address
-     */
-    function releaseERC20(address token, address account) external nonReentrant {
-        distrbutePendingTokens(token);
-        uint256 payment = tokenWithdrawable[token][account];
-
-        if (payment == 0) {
-            revert InsufficientWithdrawalBalance();
-        }
-
-        released[token][account] += payment;
-        totalTokenReleased[token] += payment;
-        tokenWithdrawable[token][account] = 0;
-
-        if (feeAccumulated[token] > 0) {
-            uint256 value = feeAccumulated[token];
-            feeAccumulated[token] = 0;
-            totalTokenReleased[token] += value;
-            platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
-            IERC20(token).safeTransfer(platformFeeWallet, value);
-        }
-
-        IERC20(token).safeTransfer(account, payment);
-
-        emit ERC20PaymentReleased(token, account, payment);
     }
 
     /** @notice Get the wallet list for a given revenue tier
@@ -708,7 +693,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     }
 
     /** @notice Update the trusted forwarder address
-     * 
+     *
      */
     function setTrustedForwarder(address forwarder) external onlyOwner {
         _setTrustedForwarder(forwarder);
