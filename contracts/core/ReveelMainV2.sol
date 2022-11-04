@@ -23,6 +23,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      ********************************/
     /** @notice Emits when a new revenue path is created
      * @param path The address of the new revenue path
+     * @param name The name of the revenue path
      */
     event RevenuePathCreated(RevenuePathV2 indexed path, string name);
 
@@ -41,12 +42,6 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      */
     event UpdatedPlatformWallet(address newWallet);
 
-    /** @notice Intialize the Revenue main contract
-     * @param _libraryAddress The revenue path contract address who's bytecode will be used for cloning
-     * @param _platformFee The platform fee percentage
-     * @param _platformWallet The platform fee collector wallet
-     */
-
     /********************************
      *           ERRORS              *
      ********************************/
@@ -55,11 +50,20 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     error ZeroAddressProvided();
 
     /**
-     * @dev Reverts when platform fee out of bound
+     * @dev Reverts when platform fee out of bound i.e greater than BASE
      */
 
     error PlatformFeeNotAppropriate();
 
+    /** @notice Intialize the Revenue main contract
+     * @param _libraryAddress The revenue path contract address who's bytecode will be used for cloning
+     * @param _platformFee The platform fee percentage
+     * @param _platformWallet The platform fee collector wallet
+     */
+
+     /********************************
+     *           FUNCTIONS              *
+     ********************************/
     constructor(
         address _libraryAddress,
         uint88 _platformFee,
@@ -80,7 +84,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     }
 
     /** @notice Creating new revenue path
-     * 
+     *
      */
     function createRevenuePath(
         address[][] calldata _walletList,
@@ -95,18 +99,11 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         pathInfo.platformFee = platformFee;
         pathInfo.isImmutable = isImmutable;
         pathInfo.factory = address(this);
-        pathInfo.forwarder= getTrustedForwarder();
+        pathInfo.forwarder = getTrustedForwarder();
 
         RevenuePathV2 path = RevenuePathV2(payable(Clones.clone(libraryAddress)));
-        path.initialize(
-            _walletList,
-            _distribution,
-            _tokenList,
-            _limitSequence,
-            pathInfo,
-            _msgSender()
-        );
-        emit RevenuePathCreated(path,_name);
+        path.initialize(_walletList, _distribution, _tokenList, _limitSequence, pathInfo, _msgSender());
+        emit RevenuePathCreated(path, _name);
     }
 
     /** @notice Sets the libaray contract address
@@ -176,6 +173,9 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         _setTrustedForwarder(forwarder);
     }
 
+    /**
+     * @notice Owner can not renounce ownership of this contract
+     */
     function renounceOwnership() public virtual override onlyOwner {
         revert();
     }
