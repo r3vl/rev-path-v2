@@ -32,13 +32,13 @@ chainpass’s customers primarily want to be paid in USDC, so tiers for ERC20s i
 1. As a path creator I should be able to designate tiers for ETH, USDC, DAI & WETH. Other tokens do not matter at this time. DAI & WETH are optional. If they add more complexity, do not include them at this time.
 2. As a path creator I should be able to set a Token Quantity based limit for each tier
 3. As a path creator I should be able to set a group of wallets for a given tier & designate each wallet's distribution share for that tier. The distribution should be percentage based so that it works the same for all token types.
-4. As a Path creator I should be able to set a 0 Limit for a given Token in a given Tier. A 0 limit would make that tier instantly complete for that token.
-5. As a Path creator the FINAL TIER should have an infinite limit & split each token based on the wallet distribution for that tier in perpetuity
-6. As a Path creator I should NOT be able to set a token limit for the FINAL TIER (it must be infinite)
-7. As a Path creator I should be able to reorder tiers ONLY if they have not received any funds
-8. As a Path creator I should be able to insert & append new tiers
-9. As a Path creator I should be able to add & remove wallets from tiers
-10. As a Path creator I should be able to edit the tier limit for a given token & given tier BUT I cannot make it lower than what has already been distributed for that tier
+4. As a Path creator the FINAL TIER should have an infinite limit & split each token based on the wallet distribution for that tier in perpetuity
+5. As a Path creator I should NOT be able to set a token limit for the FINAL TIER (it must be infinite)
+6. As a Path creator I should be able to append new tiers
+7. As a Path creator I should be able to add & remove wallets from tiers
+8. As a Path creator I should be able to edit the tier limit for a given token & given tier BUT I cannot make it lower than what has already been distributed for that tier
+9. As a Path creator (and owner) I should be able to change the trusted forwarder for meta transactions.
+10. As a Path creator I can create an path with an empty name.
 
 ***Examples***
 
@@ -51,7 +51,7 @@ chainpass’s customers primarily want to be paid in USDC, so tiers for ERC20s i
             3. Tier 3 - [Wallet A, B, C, etc], [Share's etc]
         2. Token Limits
             1. Tier 1 - ETH Limit = 1 ETH, USDC Limit = 1,000 USDC, WETH Limit = 1 WETH, etc
-            2. Tier 2 - ETH Limit = 0 ETH, USDC Limit = 2,000 USDC, ***WETH Limt = 0 WETH***, etc
+            2. Tier 2 - ETH Limit = 0.0001 ETH, USDC Limit = 2,000 USDC, ***WETH Limt = 0.00001 WETH***, etc
             3. Tier 3 - Final Distribution - all limits are ∞
 
 ### Path Collaborator
@@ -73,5 +73,7 @@ chainpass’s customers primarily want to be paid in USDC, so tiers for ERC20s i
 
 1. As a path developer I should be able to query the current tier for each Token (it may be different tiers)
 2. As a path developer I should be able to `callStatic` the `withdraw/distribute` function to determine (simulate) the not yet distributed token allocations ([https://docs.ethers.io/v5/api/contract/contract/#contract-callStatic](https://docs.ethers.io/v5/api/contract/contract/#contract-callStatic))
-3. FUTURE (when we accommodate all ERC20s) - As a path developer I should be able to query which tokens are handled in a path
-4. FUTURE (when we accommodate all ERC20s) - As a path developer I should be able to allow a Path Creator to dynamically set arbitrary ERC20 tiers for arbitrary tokens. (i.e. Path A handles shiba & USDC, Path B handles OHM & DAI)
+3. As a path developer I should be able to query which tokens are handled in a path
+4. As a path developer I should be able to allow a Path Creator to dynamically set arbitrary ERC20 tiers for arbitrary tokens. (i.e. Path A handles shiba & USDC, Path B handles OHM & DAI)
+5. As a path developer it should be clear to me that only standard ERC20s are accomodated (no rebasing or deflationary tokens).
+
