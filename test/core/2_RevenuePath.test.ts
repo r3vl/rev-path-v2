@@ -68,7 +68,7 @@ describe("RevenuePathV2 - immutable", () => {
       distributionLists,
       tokenList,
       limitSequence,
-      "Immutable Path",
+      // "Immutable Path",
       isImmutable,
     );
     await revPath.wait();
@@ -111,8 +111,8 @@ describe("RevenuePathV2 - mutable", () => {
       distributionLists,
       tokenList,
       limitSequence,
-      "Mutable Path",
-      isImmutable,
+      // "Mutable Path",
+      isImmutable
     );
     await revPath.wait();
     // get the deployed RevPath & check it
@@ -132,8 +132,20 @@ describe("RevenuePathV2 - mutable", () => {
 
   it("Add 1 tier to existing revenue path ", async () => {
     const tier = [[alex.address, bob.address, tracy.address, tirtha.address, kim.address]];
+    const tier1 = [[alex.address, bob.address]];
     const distributionList = [[2000000, 2000000, 2000000, 2000000, 2000000]];
-    // const previousTierLimit = [ethers.utils.parseEther("1.3")];
+    const distributionList1 = [[5000000, 5000000]];
+    const { tokenList, limitSequence } = pathInitializerFixture()
+    const creatingPathCost =  await reveelMain.estimateGas.createRevenuePath(
+      tier1,
+      distributionList1,
+      tokenList,
+      [[]],
+      // "Mutable Path",
+      isImmutable,
+    );
+    
+    console.log('SINGLE PATH',creatingPathCost.toString());
 
     const existingTierCount = await revenuePath.getTotalRevenueTiers();
     const receipt = await revenuePath.addRevenueTiers(tier, distributionList);
@@ -217,7 +229,7 @@ describe("RevenuePathV2 - single tier paths", () => {
       distributionLists.slice(0, 1),
       tokenList.slice(0, 1),
       [[]],
-      "Mutable Path",
+      // "Mutable Path",
       isImmutable,
     );
     await revPath.wait();
@@ -250,7 +262,10 @@ describe("RevenuePathV2 - single tier paths", () => {
 
     const pending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
     expect(balance).to.equal(pending);
+    await revenuePath.release(constants.AddressZero, tracy.address);
     await revenuePath.release(constants.AddressZero, bob.address);
+    await revenuePath.release(constants.AddressZero, alex.address);
+    await revenuePath.release(constants.AddressZero, kim.address);
     const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
     expect(newPending).to.be.lessThan(pending);
   });
@@ -277,7 +292,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
       distributionLists,
       tokenList,
       limitSequence,
-      "Mutable Path",
+      // "Mutable Path",
       isImmutable,
     );
     await revPath.wait();
@@ -326,6 +341,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
     expect(newPending).to.equal(0);
   });
 
+  // #TODO: 1
   it("Should properly calculate correct distributions after back to back deposits", async () => {
     const tx = await owner.sendTransaction({
       to: revenuePath.address,
@@ -333,42 +349,80 @@ describe("RevenuePath: Update paths & receive monies", function () {
     });
     await tx.wait();
 
-    const balance = await provider.getBalance(revenuePath.address);
-    const token = constants.AddressZero;
-    const pending = await revenuePath.getPendingDistributionAmount(token);
-    expect(balance).to.equal(pending);
+    // const balance = await provider.getBalance(revenuePath.address);
+    // const token = constants.AddressZero;
+    // const pending = await revenuePath.getPendingDistributionAmount(token);
+    // expect(balance).to.equal(pending);
 
-    await revenuePath.distributePendingTokens(constants.AddressZero);
-    // await revenuePath.release(constants.AddressZero, bob.address);
-
-    const totalAccounted = await revenuePath.getTotalTokenAccounted(token);
-    expect(balance).to.equal(totalAccounted);
-    expect(pending).to.equal(totalAccounted);
-
-    const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
-
-    expect(newPending).to.equal(0);
-
-    // send moar
-    const tx2 = await owner.sendTransaction({
-      to: revenuePath.address,
-      value: ethers.utils.parseEther("0.1"),
-    });
-    await tx2.wait();
-
-    const balance2 = await provider.getBalance(revenuePath.address);
-    const pending2 = await revenuePath.getPendingDistributionAmount(token);
-    expect(pending2.add(totalAccounted)).to.equal(balance2);
-
-    await revenuePath.distributePendingTokens(constants.AddressZero);
+    // await revenuePath.distributePendingTokens(constants.AddressZero);
     // // await revenuePath.release(constants.AddressZero, bob.address);
 
-    const totalAccounted2 = await revenuePath.getTotalTokenAccounted(token);
-    expect(balance2).to.equal(totalAccounted2);
+    // const totalAccounted = await revenuePath.getTotalTokenAccounted(token);
+    // expect(balance).to.equal(totalAccounted);
+    // expect(pending).to.equal(totalAccounted);
 
-    const newPending2 = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
+    // const newPending = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
 
-    expect(newPending2).to.equal(0);
+    // expect(newPending).to.equal(0);
+
+    // send more
+    // const tx2 = await owner.sendTransaction({
+    //   to: revenuePath.address,
+    //   value: ethers.utils.parseEther("1.2"),
+    // });
+    // await tx2.wait();
+
+    // const tx3 = await owner.sendTransaction({
+    //   to: revenuePath.address,
+    //   value: ethers.utils.parseEther("1"),
+    // });
+    // await tx3.wait();
+
+    // const tx4 = await owner.sendTransaction({
+    //   to: revenuePath.address,
+    //   value: ethers.utils.parseEther("1"),
+    // });
+    // await tx4.wait();
+
+
+    // const balance2 = await provider.getBalance(revenuePath.address);
+    // const pending2 = await revenuePath.getPendingDistributionAmount(token);
+    // expect(pending2.add(totalAccounted)).to.equal(balance2);
+
+    const fundDistrb = await revenuePath.estimateGas.distributePendingTokens(constants.AddressZero);
+    console.log('Fund Distribution',fundDistrb.toString());
+    await revenuePath.distributePendingTokens(constants.AddressZero);
+    const bobRelease  = await revenuePath.estimateGas.release(constants.AddressZero, bob.address);
+    console.log('Bob release Estimate',bobRelease.toString());
+    await revenuePath.release(constants.AddressZero, bob.address)
+    const alexRelease  = await revenuePath.estimateGas.release(constants.AddressZero, alex.address);
+    console.log('Alex release Estimate',alexRelease.toString());
+    const tracyRelease  = await revenuePath.estimateGas.release(constants.AddressZero, tracy.address);
+    console.log('tracy release Estimate',tracyRelease.toString());
+    const kimRelease  = await revenuePath.estimateGas.release(constants.AddressZero, kim.address);
+    console.log('kim release Estimate',kimRelease.toString());
+
+
+    // const tx5 = await owner.sendTransaction({
+    //   to: revenuePath.address,
+    //   value: ethers.utils.parseEther("3"),
+    // });
+    // await tx5.wait();
+    // const fundDistrb1 = await revenuePath.estimateGas.distributePendingTokens(constants.AddressZero);
+    // console.log('Final tier Fund Distribution',fundDistrb1.toString());
+
+    // const kimPostRelease  = await revenuePath.estimateGas.release(constants.AddressZero, kim.address);
+    // console.log('Kim Final release Estimate',kimPostRelease.toString());
+    // await revenuePath.release(constants.AddressZero, kim.address);
+    // const bobPostRelease  = await revenuePath.estimateGas.release(constants.AddressZero, bob.address);
+    // console.log('Bob Final release Estimate',bobPostRelease.toString());
+
+    // const totalAccounted2 = await revenuePath.getTotalTokenAccounted(token);
+    // expect(balance2).to.equal(totalAccounted2);
+
+    // const newPending2 = await revenuePath.getPendingDistributionAmount(constants.AddressZero);
+
+    // expect(newPending2).to.equal(0);
   });
 
   it("Should not distribute the same tokens twice", async () => {
@@ -569,7 +623,7 @@ describe("RevenuePath: Update paths & receive monies", function () {
         distributionLists,
         tokenList,
         limitSequence,
-        "Mutable Path",
+        // "Mutable Path",
         isImmutable,
       );
       await revPath.wait();
@@ -581,14 +635,29 @@ describe("RevenuePath: Update paths & receive monies", function () {
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
     });
 
+    // #TODO: 2
     it("ERC20 release is successful ", async () => {
       const prevBalance = await simpleToken.balanceOf(bob.address);
       const tx = await simpleToken.transfer(revenuePath.address, ethers.utils.parseEther("1000"));
       await tx.wait();
+      const distributeTokenTx = await revenuePath.estimateGas.distributePendingTokens(simpleToken.address);
+      console.log("Distribute ERC20s",distributeTokenTx.toString());
+      await revenuePath.distributePendingTokens(simpleToken.address)
+      const bobEstimate = await revenuePath.estimateGas.release(simpleToken.address, bob.address);
+      console.log("Bob ERC20 release estimate with distribution",bobEstimate.toString());
+    
+      
 
       const releaseFund = await revenuePath.release(simpleToken.address, bob.address);
       await releaseFund.wait();
 
+      const alexEstimate = await revenuePath.estimateGas.release(simpleToken.address, alex.address);
+      console.log("Alex ERC20 release estimate ",alexEstimate.toString());
+      const kimEstimate = await revenuePath.estimateGas.release(simpleToken.address, kim.address);
+      console.log("Kim ERC20 release estimate ",kimEstimate.toString());
+      const tracyEstimate = await revenuePath.estimateGas.release(simpleToken.address, tracy.address);
+      console.log("Kim ERC20 release estimate ",tracyEstimate.toString());
+      
       const contractReleased = await revenuePath.getTokenReleased(simpleToken.address, bob.address);
       const currBalance = await simpleToken.balanceOf(bob.address);
       expect(prevBalance.add(contractReleased)).to.be.equal(currBalance);

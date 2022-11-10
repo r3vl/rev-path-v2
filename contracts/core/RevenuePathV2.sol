@@ -6,6 +6,7 @@ import "openzeppelin-solidity/contracts/proxy/utils/Initializable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/security/ReentrancyGuard.sol";
 import "@opengsn/contracts/src/ERC2771Recipient.sol";
+import "../library/RevenueManagement.sol";
 
 /*******************************
  * @title Revenue Path V2
@@ -19,9 +20,8 @@ interface IReveelMainV2 {
 contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    uint256 public constant BASE = 1e7;
+    uint32 public constant BASE = 1e7;
     uint8 public constant VERSION = 2;
-
 
     //@notice Status to flag if fee is applicable to the revenue paths
     bool private feeRequired;
@@ -30,10 +30,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     bool private isImmutable;
 
     //@notice Fee percentage that will be applicable for additional tiers
-    uint88 private platformFee;
+    uint32 private platformFee;
 
     //@notice name of the revenue path
-    string private name;
+    // string private name;
 
     //@notice address of origin factory
     address private mainFactory;
@@ -41,7 +41,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     /** @notice For a given tier & address, the token revenue distribution proportion is returned
      *  @dev Index for tiers starts from 0. i.e, the first tier is marked 0 in the list.
      */
-    mapping(uint256 => mapping(address => uint256)) private revenueProportion;
+    // mapping(uint256 => mapping(address => uint256)) private revenueProportion;
 
     // @notice Amount of token released for a given wallet [token][wallet]=>[amount]
     mapping(address => mapping(address => uint256)) private released;
@@ -68,19 +68,19 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     //@noitce Total fee accumulated by the revenue path and waiting to be collected.
     mapping(address => uint256) private feeAccumulated;
 
-    struct RevenuePath {
-        address[] walletList;
-    }
+    // struct RevenuePath {
+    //     address[] walletList;
+    //     mapping(address => uint256) allocation;
+    // }
 
     struct PathInfo {
-        uint88 platformFee;
+        uint32 platformFee;
         bool isImmutable;
-        string name;
         address factory;
         address forwarder;
+        // string name;
     }
 
- 
     RevenuePath[] private revenueTiers;
 
     /********************************
@@ -121,6 +121,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      */
     event FeeReleased(address indexed token, uint256 indexed amount);
 
+    event RevenueTierAdded(address[][] wallets, uint256[][] distributions);
+    event RevenueTierUpdated(address[][] wallets, uint256[][] distributions);
+
     /********************************
      *           MODIFIERS          *
      ********************************/
@@ -141,7 +144,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @param walletCount Length of wallet list
      * @param distributionCount Length of distribution list
      */
-    error WalletAndDistrbutionCtMismatch(uint256 walletCount, uint256 distributionCount);
+    // error WalletAndDistrbutionCtMismatch(uint256 walletCount, uint256 distributionCount);
 
     /** @dev Reverts when the member has zero  withdrawal balance available
      */
@@ -160,27 +163,27 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     /**
      *  @dev Reverts when duplicate wallet entry is present during initialize, addition or updates
      */
-    error DuplicateWalletEntry();
+    // error DuplicateWalletEntry();
 
     /**
      * @dev In case invalid zero address is provided for wallet address
      */
-    error ZeroAddressProvided();
+    // error ZeroAddressProvided();
 
     /**
      * @dev Reverts when zero distribution percentage is provided
      */
-    error ZeroDistributionProvided();
+    // error ZeroDistributionProvided();
 
     /**
      * @dev Reverts when summation of distirbution is not equal to BASE
      */
-    error TotalShareNot100();
+    // error TotalShareNot100();
 
     /**
      * @dev Reverts when a tier not in existence or added is attempted for update
      */
-    error OnlyExistingTiersCanBeUpdated();
+    // error OnlyExistingTiersCanBeUpdated();
 
     /**
      * @dev Reverts when token already released is greater than the new limit that's being set for the tier.
@@ -217,7 +220,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      ********************************/
 
     /**
-     * @notice Receive ETH 
+     * @notice Receive ETH
      */
     receive() external payable {}
 
@@ -225,23 +228,27 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param token The address of the token
      */
     function distributePendingTokens(address token) public {
-
         uint256 pendingAmount = getPendingDistributionAmount(token);
-        uint256 presentTier = currentTokenTier[token];
+        uint256 presentTier;
         uint256 currentTierDistribution;
+        uint256 tokenLimit;
+        uint256 tokenTotalDistributed;
         uint256 nextTierDistribution;
         while (pendingAmount > 0) {
+            presentTier = currentTokenTier[token];
+            tokenLimit = tokenTierLimits[token][presentTier];
+            tokenTotalDistributed = totalDistributed[token][presentTier];
             if (
-                tokenTierLimits[token][presentTier] > 0 &&
-                (totalDistributed[token][presentTier] + pendingAmount) > tokenTierLimits[token][presentTier]
+                tokenLimit > 0 &&
+                ( tokenTotalDistributed + pendingAmount) > tokenLimit
             ) {
-                currentTierDistribution = tokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
+                currentTierDistribution = tokenLimit - tokenTotalDistributed;
                 nextTierDistribution = pendingAmount - currentTierDistribution;
             } else {
                 currentTierDistribution = pendingAmount;
                 nextTierDistribution = 0;
             }
-
+ 
             if (currentTierDistribution > 0) {
                 address[] memory walletMembers = revenueTiers[presentTier].walletList;
                 uint256 totalWallets = walletMembers.length;
@@ -250,12 +257,12 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                     feeDeduction = ((currentTierDistribution * platformFee) / BASE);
                     feeAccumulated[token] += feeDeduction;
                     currentTierDistribution -= feeDeduction;
-                    emit FeeDistributed(token,feeDeduction);
+                    emit FeeDistributed(token, feeDeduction);
                 }
 
                 for (uint256 i; i < totalWallets; ) {
                     tokenWithdrawable[token][walletMembers[i]] += ((currentTierDistribution *
-                        revenueProportion[presentTier][walletMembers[i]]) / BASE);
+                        revenueTiers[presentTier].allocation[walletMembers[i]]) / BASE);
                     unchecked {
                         i++;
                     }
@@ -267,12 +274,11 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             }
             pendingAmount = nextTierDistribution;
             if (nextTierDistribution > 0) {
-                presentTier += 1;
                 currentTokenTier[token] += 1;
             }
         }
+    
     }
-
 
     /** @notice Get the token amount that has not been allocated for in the revenue path
      *  @param token The token address
@@ -318,7 +324,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             revert TokensAndTierLimitMismatch({ tokenCount: totalTokens, limitListCount: _limitSequence.length });
         }
         for (uint256 i; i < totalTiers; ) {
-            RevenuePath memory tier;
+            uint256 tierLength = revenueTiers.length;
+            revenueTiers.push();
+            RevenuePath storage tier = revenueTiers[tierLength];
 
             uint256 walletMembers = _walletList[i].length;
 
@@ -334,7 +342,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             uint256 totalShare;
             for (uint256 j; j < walletMembers; ) {
                 address wallet = (_walletList[i])[j];
-                if (revenueProportion[i][wallet] > 0) {
+                if (tier.allocation[wallet] > 0) {
                     revert DuplicateWalletEntry();
                 }
                 if (wallet == address(0)) {
@@ -343,7 +351,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 if ((_distribution[i])[j] == 0) {
                     revert ZeroDistributionProvided();
                 }
-                revenueProportion[i][wallet] = (_distribution[i])[j];
+                // revenueProportion[i][wallet] = (_distribution[i])[j];
+                tier.allocation[wallet] = (_distribution[i])[j];
                 totalShare += (_distribution[i])[j];
                 unchecked {
                     j++;
@@ -352,7 +361,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             if (totalShare != BASE) {
                 revert TotalShareNot100();
             }
-            revenueTiers.push(tier);
 
             unchecked {
                 i++;
@@ -389,7 +397,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         mainFactory = pathInfo.factory;
         platformFee = pathInfo.platformFee;
         isImmutable = pathInfo.isImmutable;
-        name = pathInfo.name;
+        // name = pathInfo.name;
         _transferOwnership(_owner);
         _setTrustedForwarder(pathInfo.forwarder);
     }
@@ -403,60 +411,13 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         isMutable
         onlyOwner
     {
-        if (_walletList.length != _distribution.length) {
-            revert WalletAndDistrbutionCtMismatch({
-                walletCount: _walletList.length,
-                distributionCount: _distribution.length
-            });
-        }
+        RevenueManagement._addRevenueTiers(_walletList,_distribution,revenueTiers);
 
-        uint256 listLength = _walletList.length;
-        uint256 nextRevenueTier = revenueTiers.length;
-
-        for (uint256 i; i < listLength; ) {
-            uint256 walletMembers = _walletList[i].length;
-
-            if (walletMembers != _distribution[i].length) {
-                revert WalletAndDistrbutionCtMismatch({
-                    walletCount: walletMembers,
-                    distributionCount: _distribution[i].length
-                });
-            }
-            RevenuePath memory tier;
-            tier.walletList = _walletList[i];
-            uint256 totalShares;
-            for (uint256 j; j < walletMembers; ) {
-                if (revenueProportion[nextRevenueTier][(_walletList[i])[j]] > 0) {
-                    revert DuplicateWalletEntry();
-                }
-
-                if ((_walletList[i])[j] == address(0)) {
-                    revert ZeroAddressProvided();
-                }
-                if ((_distribution[i])[j] == 0) {
-                    revert ZeroDistributionProvided();
-                }
-
-                revenueProportion[nextRevenueTier][(_walletList[i])[j]] = (_distribution[i])[j];
-                totalShares += (_distribution[i])[j];
-                unchecked {
-                    j++;
-                }
-            }
-
-            if (totalShares != BASE) {
-                revert TotalShareNot100();
-            }
-            revenueTiers.push(tier);
-            nextRevenueTier += 1;
-
-            unchecked {
-                i++;
-            }
-        }
         if (!feeRequired) {
             feeRequired = true;
         }
+
+        emit RevenueTierAdded(_walletList,_distribution);
     }
 
     /** @notice Updating distribution for existing revenue tiers
@@ -469,60 +430,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         uint256[][] calldata _distribution,
         uint256[] calldata _tierNumbers
     ) external isMutable onlyOwner {
+        RevenueManagement._updateRevenueTiers(_walletList,_distribution,_tierNumbers,revenueTiers);
 
-        uint256 totalUpdates = _tierNumbers.length;
-        if (_walletList.length != _distribution.length && _walletList.length != totalUpdates ) {
-            revert WalletAndDistrbutionCtMismatch({
-                walletCount: _walletList.length,
-                distributionCount: _distribution.length
-            });
-        }
-
-        uint256 totalTiers = revenueTiers.length;
-
-        for (uint256 i; i < totalUpdates; ) {
-            uint256 totalWallets = _walletList[i].length;
-            if (totalWallets != _distribution[i].length) {
-                revert WalletAndDistrbutionCtMismatch({
-                    walletCount: _walletList[i].length,
-                    distributionCount: _distribution[i].length
-                });
-            }
-            uint256 tier = _tierNumbers[i];
-            if (tier >= totalTiers) {
-                revert OnlyExistingTiersCanBeUpdated();
-            }
-
-            uint256 totalShares;
-            address[] memory newWalletList = new address[](totalWallets);
-            for (uint256 j; j < totalWallets; ) {
-                address wallet = (_walletList[i])[j];
-                if (revenueProportion[tier][wallet] > 0) {
-                    revert DuplicateWalletEntry();
-                }
-
-                if (wallet == address(0)) {
-                    revert ZeroAddressProvided();
-                }
-                if ((_distribution[i])[j] == 0) {
-                    revert ZeroDistributionProvided();
-                }
-                revenueProportion[tier][wallet] = (_distribution[i])[j];
-                totalShares += (_distribution[i])[j];
-                newWalletList[j] = wallet;
-
-                unchecked {
-                    j++;
-                }
-            }
-            revenueTiers[tier].walletList = newWalletList;
-            if (totalShares != BASE) {
-                revert TotalShareNot100();
-            }
-            unchecked {
-                i++;
-            }
-        }
+        emit RevenueTierUpdated(_walletList,_distribution);
     }
 
     /** @notice Update tier limits for given tokens for an existing tier
@@ -585,7 +495,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 totalTokenReleased[token] += value;
                 address platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
                 sendValue(payable(platformFeeWallet), value);
-                emit FeeReleased(token,value);
+                // emit FeeReleased(token,value);
             }
 
             sendValue(account, payment);
@@ -598,7 +508,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 totalTokenReleased[token] += value;
                 address platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
                 IERC20(token).safeTransfer(platformFeeWallet, value);
-                emit FeeReleased(token,value);
+                // emit FeeReleased(token,value);
             }
 
             IERC20(token).safeTransfer(account, payment);
@@ -606,7 +516,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             emit ERC20PaymentReleased(token, account, payment);
         }
     }
-
     /** @notice Get the wallet list for a given revenue tier
      * @param tierNumber the index of the tier for which list needs to be provided.
      */
@@ -640,7 +549,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param account The wallet address for which revenue proportion is requested
      */
     function getRevenueProportion(uint256 tier, address account) external view returns (uint256 proportion) {
-        return revenueProportion[tier][account];
+        return revenueTiers[tier].allocation[account];
     }
 
     /** @notice Get the amount of token distrbuted for a given tier
@@ -682,9 +591,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
 
     /** @notice Get the revenue path name.
      */
-    function getRevenuePathName() external view returns (string memory) {
-        return name;
-    }
+    // function getRevenuePathName() external view returns (string memory) {
+    //     return name;
+    // }
 
     /** @notice Get the amount of total eth withdrawn by the account
      */
@@ -692,10 +601,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         return released[token][account];
     }
 
-    function getTokenTierLimits(address token, uint256 tier) external view returns (uint256){
-       return tokenTierLimits[token][tier];
+    function getTokenTierLimits(address token, uint256 tier) external view returns (uint256) {
+        return tokenTierLimits[token][tier];
     }
-
 
     /** @notice Update the trusted forwarder address
      *  @param forwarder The address of the new forwarder
@@ -717,8 +625,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @notice Returns total token released
      * @param token The token for which total released amount is fetched
      */
-    function getTotalTokenReleased(address token) external view returns(uint256){
-        
+    function getTotalTokenReleased(address token) external view returns (uint256) {
         return totalTokenReleased[token];
     }
 
@@ -726,27 +633,23 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @notice Returns total token accounted for a given token address
      * @param token The token for which total accountd amount is fetched
      */
-    function getTotalTokenAccounted(address token) external view returns(uint256){
-        
+    function getTotalTokenAccounted(address token) external view returns (uint256) {
         return totalTokenAccounted[token];
     }
 
     /**
      * @notice Returns withdrawable or claimable token amount for a given wallet in the revenue path
      */
-    function getWithdrawableToken(address token,address wallet) external view returns(uint256){
-        
+    function getWithdrawableToken(address token, address wallet) external view returns (uint256) {
         return tokenWithdrawable[token][wallet];
-
     }
 
     /**
      * @notice Returns the ReveelMainV2 contract address
      */
-    function getMainFactory()external view returns(address){
+    function getMainFactory() external view returns (address) {
         return mainFactory;
     }
-    
 
     /** @notice Transfer handler for ETH
      * @param recipient The address of the receiver

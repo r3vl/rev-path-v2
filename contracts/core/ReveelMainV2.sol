@@ -9,9 +9,9 @@ import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "./RevenuePathV2.sol";
 
 contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
-    uint256 public constant BASE = 1e7;
+    uint32 public constant BASE = 1e7;
     //@notice Fee percentage that will be applicable for additional tiers
-    uint88 private platformFee;
+    uint32 private platformFee;
     //@notice Address of platform wallet to collect fees
     address private platformWallet;
 
@@ -23,9 +23,8 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      ********************************/
     /** @notice Emits when a new revenue path is created
      * @param path The address of the new revenue path
-     * @param name The name of the revenue path
      */
-    event RevenuePathCreated(RevenuePathV2 indexed path, string name);
+    event RevenuePathCreated(RevenuePathV2 indexed path);
 
     /** @notice Updates the libaray contract address
      * @param newLibrary The address of the library contract
@@ -47,7 +46,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      ********************************/
     /** @dev Reverts when zero address is assigned
      */
-    error ZeroAddressProvided();
+    // error ZeroAddressProvided();
 
     /**
      * @dev Reverts when platform fee out of bound i.e greater than BASE
@@ -66,7 +65,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      ********************************/
     constructor(
         address _libraryAddress,
-        uint88 _platformFee,
+        uint32 _platformFee,
         address _platformWallet,
         address _forwarder
     ) {
@@ -91,11 +90,11 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         uint256[][] calldata _distribution,
         address[] memory _tokenList,
         uint256[][] memory _limitSequence,
-        string memory _name,
+        // string memory _name,
         bool isImmutable
     ) external whenNotPaused {
         RevenuePathV2.PathInfo memory pathInfo;
-        pathInfo.name = _name;
+        // pathInfo.name = _name;
         pathInfo.platformFee = platformFee;
         pathInfo.isImmutable = isImmutable;
         pathInfo.factory = address(this);
@@ -103,7 +102,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
 
         RevenuePathV2 path = RevenuePathV2(payable(Clones.clone(libraryAddress)));
         path.initialize(_walletList, _distribution, _tokenList, _limitSequence, pathInfo, _msgSender());
-        emit RevenuePathCreated(path, _name);
+        emit RevenuePathCreated(path);
     }
 
     /** @notice Sets the libaray contract address
@@ -120,7 +119,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     /** @notice Set the platform fee percentage
      * @param newFeePercentage The new fee percentage
      */
-    function setPlatformFee(uint88 newFeePercentage) external onlyOwner {
+    function setPlatformFee(uint32 newFeePercentage) external onlyOwner {
         if (newFeePercentage > BASE) {
             revert PlatformFeeNotAppropriate();
         }

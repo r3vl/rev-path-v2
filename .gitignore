@@ -16,6 +16,7 @@
 **/node_modules
 
 local/*
+Optimization-report/*
 
 # files
 *.env

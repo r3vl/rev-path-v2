@@ -187,7 +187,7 @@ describe("ReveelMainV2", () => {
         distributionList,
         tokenList,
         limitSequence,
-        name,
+        // name,
         isImmutable
       )).to.be.revertedWith("Pausable: paused");
     });
@@ -228,7 +228,7 @@ describe("ReveelMainV2", () => {
         distributionList,
         tokenList,
         limitSequence,
-        name,
+        // name,
         isImmutable
       )
       // get the deployed RevPath & check it
@@ -239,7 +239,7 @@ describe("ReveelMainV2", () => {
       const deployedAddress = filteredEvents[0].args?.path;
       const deployedName = filteredEvents[0].args?.name;
       expect(deployedAddress).to.be.properAddress;
-      expect(deployedName).to.equal(name);
+      // expect(deployedName).to.equal(name);
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
       expect(deployedAddress).to.equal(revenuePath.address);
       expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
@@ -260,7 +260,7 @@ describe("ReveelMainV2", () => {
         distributionList,
         tokenList,
         limitSequence,
-        name,
+        // name,
         isImmutable
       )
 
@@ -272,7 +272,7 @@ describe("ReveelMainV2", () => {
       const deployedAddress = filteredEvents[0].args?.path;
       const deployedName = filteredEvents[0].args?.name;
       expect(deployedAddress).to.be.properAddress;
-      expect(deployedName).to.equal(name);
+      // expect(deployedName).to.equal(name);
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
       expect(deployedAddress).to.equal(revenuePath.address);
       expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
@@ -295,7 +295,7 @@ describe("ReveelMainV2", () => {
         distributionList,
         tokenList,
         limitSequence,
-        name,
+        // name,
         isImmutable
       )
       // get the deployed RevPath & check it
@@ -306,7 +306,7 @@ describe("ReveelMainV2", () => {
       const deployedAddress = filteredEvents[0].args?.path;
       const deployedName = filteredEvents[0].args?.name;
       expect(deployedAddress).to.be.properAddress;
-      expect(deployedName).to.equal(name);
+      // expect(deployedName).to.equal(name);
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
       expect(deployedAddress).to.equal(revenuePath.address);
       expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
@@ -330,7 +330,7 @@ describe("ReveelMainV2", () => {
         distributionList,
         tokenList,
         limitSequence,
-        name,
+        // name,
         isImmutable
       )
       // get the deployed RevPath & check it
@@ -341,7 +341,7 @@ describe("ReveelMainV2", () => {
       const deployedAddress = filteredEvents[0].args?.path;
       const deployedName = filteredEvents[0].args?.name;
       expect(deployedAddress).to.be.properAddress;
-      expect(deployedName).to.equal(name);
+      // expect(deployedName).to.equal(name);
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
       expect(deployedAddress).to.equal(revenuePath.address);
       expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);
@@ -372,7 +372,7 @@ describe("ReveelMainV2", () => {
         distributionList,
         tokenList,
         limitSequence,
-        name,
+        // name,
         isImmutable
       )
       // get the deployed RevPath & check it
@@ -383,7 +383,7 @@ describe("ReveelMainV2", () => {
       const deployedAddress = filteredEvents[0].args?.path;
       const deployedName = filteredEvents[0].args?.name;
       expect(deployedAddress).to.be.properAddress;
-      expect(deployedName).to.equal(name);
+      // expect(deployedName).to.equal(name);
       revenuePath = await RevenuePathV2__factory.connect(deployedAddress, owner);
       expect(deployedAddress).to.equal(revenuePath.address);
       expect(await revenuePath.getPlatformFee()).to.equal(platformFeePercentage);

@@ -60,7 +60,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   gasReporter: {
     currency: "USD",
-    gasPrice: 8,
+    gasPrice: 22,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     excludeContracts: [],
     src: "./contracts",
