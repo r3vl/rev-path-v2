@@ -107,6 +107,12 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      */
     event TokenDistributed(address indexed token, uint256 indexed amount, uint256 indexed tier);
 
+    /** @notice Emits on receive; mimics ERC20 Transfer
+     *  @param from Address that deposited the eth
+     *  @param value Amount of ETH deposited
+     */
+    event DepositETH(address indexed from, uint256 value);
+
     /**
      *  @notice Emits when fee is distributed
      *  @param token The token address. Address 0 for native gas token like ETH
@@ -219,7 +225,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     /**
      * @notice Receive ETH 
      */
-    receive() external payable {}
+    receive() external payable {
+        emit DepositETH(msg.sender, msg.value);
+    }
 
     /** @notice Called for a given token to distribute, unallocated tokens to the respective tiers and wallet members
      *  @param token The address of the token

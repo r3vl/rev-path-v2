@@ -412,6 +412,19 @@ describe("RevenuePath: Update paths & receive monies", function () {
     expect(bobBefore.add(bobsReleases)).to.equal(bobAfter);
   });
 
+  it("Should emit DepositETH event", async () => {
+    const value = ethers.utils.parseEther("0.8");
+    const tx = await owner.sendTransaction({
+      to: revenuePath.address,
+      value,
+    });
+    await tx.wait();
+
+    await expect(tx)
+        .to.emit(revenuePath, "DepositETH")
+        .withArgs(owner.address, value)
+  });
+
   it("Should revert if there is no ETH to release", async () => {
     await expect(revenuePath.release(simpleToken.address, bob.address)).to.revertedWithCustomError(
       revenuePath,
