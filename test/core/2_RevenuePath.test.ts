@@ -141,6 +141,17 @@ describe("RevenuePathV2 - mutable", () => {
     expect(await revenuePath.getTotalRevenueTiers()).to.equal(existingTierCount.add(1));
   });
 
+  it("should emit when adding tier to revenue path ", async () => {
+    const tier = [[alex.address, bob.address, tracy.address, tirtha.address, kim.address]];
+    const distributionList = [[2000000, 2000000, 2000000, 2000000, 2000000]];
+
+    const receipt = await revenuePath.addRevenueTiers(tier, distributionList);
+    await receipt.wait();
+    await expect(receipt)
+        .to.emit(revenuePath, "RevenueTierAdded")
+        // .withArgs(tier, distributionList) // array matching issues: https://github.com/NomicFoundation/hardhat/issues/3080
+  });
+
   it("Add multiple tiers to existing revenue path ", async () => {
     const tiers = [
       [bob.address, tracy.address, kim.address],
@@ -522,14 +533,43 @@ describe("RevenuePath: Update paths & receive monies", function () {
     expect(updatedRevTier[0]).to.equal(tier[0]);
   });
 
+  it("Should emit RevenueTierUpdated event when tier is updated", async () => {
+    const tier = [owner.address];
+    const distributionList = [10000000];
+    const tierNumbers= [0];
+
+    const updateTx = await revenuePath.updateRevenueTiers([tier], [distributionList], tierNumbers);
+    await updateTx.wait();
+
+    await expect(updateTx)
+        .to.emit(revenuePath, "RevenueTierUpdated")
+        // .withArgs(tierNumbers, [tier], [distributionList]) // array matching issues: https://github.com/NomicFoundation/hardhat/issues/3080
+  });
+
   it("Should update limits for a given tier", async () => {
     const originalLimits = await revenuePath.getTokenTierLimits(constants.AddressZero, 0)
-    const updateTx = await revenuePath.updateLimits([constants.AddressZero], [ethers.utils.parseEther("11")], 0);
+
+    const tier = 0;
+    const tokenList = [constants.AddressZero];
+    const newLimits = [ethers.utils.parseEther("11")];
+    const updateTx = await revenuePath.updateLimits(tokenList, newLimits, tier);
     await updateTx.wait();
 
     const limits = await revenuePath.getTokenTierLimits(constants.AddressZero, 0)
     expect(limits).to.not.equal(originalLimits);
-    expect(limits).to.equal(ethers.utils.parseEther("11"));
+    expect(limits).to.equal(newLimits[0]);
+  });
+
+  it("Should emit TierLimitUpdated event when limit is updated", async () => {
+    const tier = 0;
+    const tokenList = [constants.AddressZero];
+    const newLimits = [ethers.utils.parseEther("11")];
+    const updateTx = await revenuePath.updateLimits(tokenList, newLimits, tier);
+    await updateTx.wait();
+
+    await expect(updateTx)
+        .to.emit(revenuePath, "TierLimitUpdated")
+        .withArgs(tier, tokenList, newLimits)
   });
 
   it("Reverts when final tier limit is attempted for update", async () => {
