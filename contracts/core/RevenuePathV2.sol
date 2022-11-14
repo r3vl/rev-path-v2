@@ -107,6 +107,12 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      */
     event TokenDistributed(address indexed token, uint256 indexed amount, uint256 indexed tier);
 
+    /** @notice Emits on receive; mimics ERC20 Transfer
+     *  @param from Address that deposited the eth
+     *  @param value Amount of ETH deposited
+     */
+    event DepositETH(address indexed from, uint256 value);
+
     /**
      *  @notice Emits when fee is distributed
      *  @param token The token address. Address 0 for native gas token like ETH
@@ -120,6 +126,29 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param amount The amount of fee released
      */
     event FeeReleased(address indexed token, uint256 indexed amount);
+
+    /**
+     * emits when one or more revenue tiers are added
+     *  @param wallets Array of arrays of wallet lists (each array is a tier)
+     *  @param distributions Array of arrays of distr %s (each array is a tier)
+     */
+    event RevenueTierAdded(address[][] wallets, uint256[][] distributions);
+
+    /**
+     * emits when one or more revenue tiers wallets/distributions are updated
+     *  @param tierNumbers Array tier numbers being updated
+     *  @param wallets Array of arrays of wallet lists (each array is a tier)
+     *  @param distributions Array of arrays of distr %s (each array is a tier)
+     */
+    event RevenueTierUpdated(uint256[] tierNumbers, address[][] wallets, uint256[][] distributions);
+
+    /**
+     * emits when one revenue tier's limit is updated
+     *  @param tier tier number being updated
+     *  @param tokenList Array of tokens in that tier
+     *  @param newLimits Array of limits for those tokens
+     */
+    event TierLimitUpdated(uint256 tier, address[] tokenList, uint256[] newLimits);
 
     /********************************
      *           MODIFIERS          *
@@ -219,7 +248,9 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     /**
      * @notice Receive ETH 
      */
-    receive() external payable {}
+    receive() external payable {
+        emit DepositETH(_msgSender(), msg.value);
+    }
 
     /** @notice Called for a given token to distribute, unallocated tokens to the respective tiers and wallet members
      *  @param token The address of the token
@@ -296,7 +327,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param pathInfo A property object for the path details
      *  @param _owner Address of path owner
      */
-
     function initialize(
         address[][] memory _walletList,
         uint256[][] memory _distribution,
@@ -457,6 +487,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         if (!feeRequired) {
             feeRequired = true;
         }
+        emit RevenueTierAdded(_walletList, _distribution);
     }
 
     /** @notice Updating distribution for existing revenue tiers
@@ -523,6 +554,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 i++;
             }
         }
+        emit RevenueTierUpdated(_tierNumbers, _walletList, _distribution);
     }
 
     /** @notice Update tier limits for given tokens for an existing tier
@@ -559,6 +591,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 i++;
             }
         }
+        emit TierLimitUpdated(tier, tokenList, newLimits);
     }
 
     /** @notice Releases distribute token
