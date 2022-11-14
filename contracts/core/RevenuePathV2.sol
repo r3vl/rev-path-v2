@@ -249,7 +249,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @notice Receive ETH 
      */
     receive() external payable {
-        emit DepositETH(msg.sender, msg.value);
+        emit DepositETH(_msgSender(), msg.value);
     }
 
     /** @notice Called for a given token to distribute, unallocated tokens to the respective tiers and wallet members
