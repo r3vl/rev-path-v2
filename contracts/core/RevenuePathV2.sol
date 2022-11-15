@@ -19,7 +19,7 @@ interface IReveelMainV2 {
 contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    uint256 public constant BASE = 1e7;
+    uint32 public constant BASE = 1e7;
     uint8 public constant VERSION = 2;
 
     //@notice Status to flag if fee is applicable to the revenue paths
@@ -29,10 +29,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     bool private isImmutable;
 
     //@notice Fee percentage that will be applicable for additional tiers
-    uint88 private platformFee;
-
-    //@notice name of the revenue path
-    string private name;
+    uint32 private platformFee;
 
     //@notice address of origin factory
     address private mainFactory;
@@ -72,9 +69,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     }
 
     struct PathInfo {
-        uint88 platformFee;
+        uint32 platformFee;
         bool isImmutable;
-        string name;
         address factory;
         address forwarder;
     }
@@ -415,7 +411,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         mainFactory = pathInfo.factory;
         platformFee = pathInfo.platformFee;
         isImmutable = pathInfo.isImmutable;
-        name = pathInfo.name;
         _transferOwnership(_owner);
         _setTrustedForwarder(pathInfo.forwarder);
     }
@@ -712,12 +707,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      */
     function getImmutabilityStatus() external view returns (bool) {
         return isImmutable;
-    }
-
-    /** @notice Get the revenue path name.
-     */
-    function getRevenuePathName() external view returns (string memory) {
-        return name;
     }
 
     /** @notice Get the amount of total eth withdrawn by the account
