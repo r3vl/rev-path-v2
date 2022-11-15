@@ -523,8 +523,8 @@ describe("RevenuePath: Update paths & receive monies", function () {
   });
 
   it("Update revenue tier for given tier number ", async () => {
-    const tier = [owner.address];
-    const distributionList = [10000000];
+    const tier = [bob.address, tracy.address, alex.address, kim.address];
+    const distributionList = [2000000,3000000,2000000,3000000];
 
     const updateTx = await revenuePath.updateRevenueTiers([tier], [distributionList], [0]);
     await updateTx.wait();
