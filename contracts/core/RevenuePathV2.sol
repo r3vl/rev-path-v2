@@ -228,7 +228,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     /**
      * @dev The total tiers list and limits list length mismatch
      */
-    error TotalTierLimitsMismatch();
+    error TotalTierLimitsMismatch(uint256 tiers, uint256 limits);
 
     /**
      * @dev Reverts when final tier is attempted for updates
@@ -390,7 +390,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             address token = _tokenList[k];
             for (uint256 m; m < totalTiers; ) {
                 if ((totalTiers - 1) != _limitSequence[k].length) {
-                    revert TotalTierLimitsMismatch();
+                    revert TotalTierLimitsMismatch({
+                        tiers:totalTiers,
+                        limits: _limitSequence[k].length
+                    });
                 }
                 // set tier limits, except for final tier which has no limit
                 if (m != totalTiers - 1) {
