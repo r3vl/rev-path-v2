@@ -250,22 +250,27 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param token The address of the token
      */
     function distributePendingTokens(address token) public {
-        uint256 pendingAmount = getPendingDistributionAmount(token);
-        uint256 presentTier = currentTokenTier[token];
+   uint256 pendingAmount = getPendingDistributionAmount(token);
+        uint256 presentTier;
         uint256 currentTierDistribution;
+        uint256 tokenLimit;
+        uint256 tokenTotalDistributed;
         uint256 nextTierDistribution;
         while (pendingAmount > 0) {
+            presentTier = currentTokenTier[token];
+            tokenLimit = tokenTierLimits[token][presentTier];
+            tokenTotalDistributed = totalDistributed[token][presentTier];
             if (
-                tokenTierLimits[token][presentTier] > 0 &&
-                (totalDistributed[token][presentTier] + pendingAmount) > tokenTierLimits[token][presentTier]
+                tokenLimit > 0 &&
+                ( tokenTotalDistributed + pendingAmount) > tokenLimit
             ) {
-                currentTierDistribution = tokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
+                currentTierDistribution = tokenLimit - tokenTotalDistributed;
                 nextTierDistribution = pendingAmount - currentTierDistribution;
             } else {
                 currentTierDistribution = pendingAmount;
                 nextTierDistribution = 0;
             }
-
+ 
             if (currentTierDistribution > 0) {
                 address[] memory walletMembers = revenueTiers[presentTier].walletList;
                 uint256 totalWallets = walletMembers.length;
@@ -291,10 +296,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             }
             pendingAmount = nextTierDistribution;
             if (nextTierDistribution > 0) {
-                presentTier += 1;
                 currentTokenTier[token] += 1;
             }
         }
+    
     }
 
     /** @notice Get the token amount that has not been allocated for in the revenue path
