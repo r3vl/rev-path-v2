@@ -9,9 +9,9 @@ import "@opengsn/contracts/src/ERC2771Recipient.sol";
 import "./RevenuePathV2.sol";
 
 contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
-    uint256 public constant BASE = 1e7;
+    uint32 public constant BASE = 1e7;
     //@notice Fee percentage that will be applicable for additional tiers
-    uint88 private platformFee;
+    uint32 private platformFee;
     //@notice Address of platform wallet to collect fees
     address private platformWallet;
 
@@ -35,7 +35,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     /** @notice Updates the platform fee percentage
      * @param newFeePercentage The new fee percentage
      */
-    event UpdatedPlatformFee(uint88 newFeePercentage);
+    event UpdatedPlatformFee(uint32 newFeePercentage);
 
     /** @notice Updates the platform fee collecting wallet
      * @param newWallet The new fee collecting wallet
@@ -66,7 +66,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
      ********************************/
     constructor(
         address _libraryAddress,
-        uint88 _platformFee,
+        uint32 _platformFee,
         address _platformWallet,
         address _forwarder
     ) {
@@ -95,7 +95,6 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
         bool isImmutable
     ) external whenNotPaused {
         RevenuePathV2.PathInfo memory pathInfo;
-        pathInfo.name = _name;
         pathInfo.platformFee = platformFee;
         pathInfo.isImmutable = isImmutable;
         pathInfo.factory = address(this);
@@ -120,7 +119,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
     /** @notice Set the platform fee percentage
      * @param newFeePercentage The new fee percentage
      */
-    function setPlatformFee(uint88 newFeePercentage) external onlyOwner {
+    function setPlatformFee(uint32 newFeePercentage) external onlyOwner {
         if (newFeePercentage > BASE) {
             revert PlatformFeeNotAppropriate();
         }
@@ -159,7 +158,7 @@ contract ReveelMainV2 is ERC2771Recipient, Ownable, Pausable {
 
     /** @notice Gets the platform fee percentage
      */
-    function getPlatformFee() external view returns (uint88) {
+    function getPlatformFee() external view returns (uint32) {
         return platformFee;
     }
 

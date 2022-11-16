@@ -19,9 +19,8 @@ interface IReveelMainV2 {
 contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    uint256 public constant BASE = 1e7;
+    uint32 public constant BASE = 1e7;
     uint8 public constant VERSION = 2;
-
 
     //@notice Status to flag if fee is applicable to the revenue paths
     bool private feeRequired;
@@ -30,10 +29,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     bool private isImmutable;
 
     //@notice Fee percentage that will be applicable for additional tiers
-    uint88 private platformFee;
-
-    //@notice name of the revenue path
-    string private name;
+    uint32 private platformFee;
 
     //@notice address of origin factory
     address private mainFactory;
@@ -73,14 +69,12 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     }
 
     struct PathInfo {
-        uint88 platformFee;
+        uint32 platformFee;
         bool isImmutable;
-        string name;
         address factory;
         address forwarder;
     }
 
- 
     RevenuePath[] private revenueTiers;
 
     /********************************
@@ -234,7 +228,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
     /**
      * @dev The total tiers list and limits list length mismatch
      */
-    error TotalTierLimitsMismatch();
+    error TotalTierLimitsMismatch(uint256 tiers, uint256 limits);
 
     /**
      * @dev Reverts when final tier is attempted for updates
@@ -246,7 +240,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      ********************************/
 
     /**
-     * @notice Receive ETH 
+     * @notice Receive ETH
      */
     receive() external payable {
         emit DepositETH(_msgSender(), msg.value);
@@ -256,23 +250,27 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param token The address of the token
      */
     function distributePendingTokens(address token) public {
-
-        uint256 pendingAmount = getPendingDistributionAmount(token);
-        uint256 presentTier = currentTokenTier[token];
+   uint256 pendingAmount = getPendingDistributionAmount(token);
+        uint256 presentTier;
         uint256 currentTierDistribution;
+        uint256 tokenLimit;
+        uint256 tokenTotalDistributed;
         uint256 nextTierDistribution;
         while (pendingAmount > 0) {
+            presentTier = currentTokenTier[token];
+            tokenLimit = tokenTierLimits[token][presentTier];
+            tokenTotalDistributed = totalDistributed[token][presentTier];
             if (
-                tokenTierLimits[token][presentTier] > 0 &&
-                (totalDistributed[token][presentTier] + pendingAmount) > tokenTierLimits[token][presentTier]
+                tokenLimit > 0 &&
+                ( tokenTotalDistributed + pendingAmount) > tokenLimit
             ) {
-                currentTierDistribution = tokenTierLimits[token][presentTier] - totalDistributed[token][presentTier];
+                currentTierDistribution = tokenLimit - tokenTotalDistributed;
                 nextTierDistribution = pendingAmount - currentTierDistribution;
             } else {
                 currentTierDistribution = pendingAmount;
                 nextTierDistribution = 0;
             }
-
+ 
             if (currentTierDistribution > 0) {
                 address[] memory walletMembers = revenueTiers[presentTier].walletList;
                 uint256 totalWallets = walletMembers.length;
@@ -281,7 +279,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                     feeDeduction = ((currentTierDistribution * platformFee) / BASE);
                     feeAccumulated[token] += feeDeduction;
                     currentTierDistribution -= feeDeduction;
-                    emit FeeDistributed(token,feeDeduction);
+                    emit FeeDistributed(token, feeDeduction);
                 }
 
                 for (uint256 i; i < totalWallets; ) {
@@ -298,12 +296,11 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             }
             pendingAmount = nextTierDistribution;
             if (nextTierDistribution > 0) {
-                presentTier += 1;
                 currentTokenTier[token] += 1;
             }
         }
+    
     }
-
 
     /** @notice Get the token amount that has not been allocated for in the revenue path
      *  @param token The token address
@@ -393,7 +390,10 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             address token = _tokenList[k];
             for (uint256 m; m < totalTiers; ) {
                 if ((totalTiers - 1) != _limitSequence[k].length) {
-                    revert TotalTierLimitsMismatch();
+                    revert TotalTierLimitsMismatch({
+                        tiers:totalTiers,
+                        limits: _limitSequence[k].length
+                    });
                 }
                 // set tier limits, except for final tier which has no limit
                 if (m != totalTiers - 1) {
@@ -419,7 +419,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         mainFactory = pathInfo.factory;
         platformFee = pathInfo.platformFee;
         isImmutable = pathInfo.isImmutable;
-        name = pathInfo.name;
         _transferOwnership(_owner);
         _setTrustedForwarder(pathInfo.forwarder);
     }
@@ -500,9 +499,8 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         uint256[][] calldata _distribution,
         uint256[] calldata _tierNumbers
     ) external isMutable onlyOwner {
-
         uint256 totalUpdates = _tierNumbers.length;
-        if (_walletList.length != _distribution.length && _walletList.length != totalUpdates ) {
+        if (_walletList.length != _distribution.length && _walletList.length != totalUpdates) {
             revert WalletAndDistrbutionCtMismatch({
                 walletCount: _walletList.length,
                 distributionCount: _distribution.length
@@ -522,6 +520,15 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             uint256 tier = _tierNumbers[i];
             if (tier >= totalTiers) {
                 revert OnlyExistingTiersCanBeUpdated();
+            }
+
+            address[] memory previousWalletList = revenueTiers[tier].walletList;
+
+            for (uint256 k; k < previousWalletList.length; ) {
+                revenueProportion[tier][previousWalletList[k]] = 0;
+                unchecked {
+                    k++;
+                }
             }
 
             uint256 totalShares;
@@ -598,40 +605,37 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @param token The token address
      * @param account The address of the receiver
      */
-    function release(address token, address payable account) external nonReentrant  {
+    function release(address token, address payable account) external nonReentrant {
         distributePendingTokens(token);
         uint256 payment = tokenWithdrawable[token][account];
-            if (payment == 0) {
-                revert NoDuePayment();
-            }
-                    
-            released[token][account] += payment;
-            totalTokenReleased[token] += payment;
-            tokenWithdrawable[token][account] = 0;
+        if (payment == 0) {
+            revert NoDuePayment();
+        }
+
+        released[token][account] += payment;
+        totalTokenReleased[token] += payment;
+        tokenWithdrawable[token][account] = 0;
 
         if (token == address(0)) {
-
-
             if (feeAccumulated[token] > 0) {
                 uint256 value = feeAccumulated[token];
                 feeAccumulated[token] = 0;
                 totalTokenReleased[token] += value;
                 address platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
                 sendValue(payable(platformFeeWallet), value);
-                emit FeeReleased(token,value);
+                emit FeeReleased(token, value);
             }
 
             sendValue(account, payment);
             emit PaymentReleased(account, token, payment);
         } else {
-
             if (feeAccumulated[token] > 0) {
                 uint256 value = feeAccumulated[token];
                 feeAccumulated[token] = 0;
                 totalTokenReleased[token] += value;
                 address platformFeeWallet = IReveelMainV2(mainFactory).getPlatformWallet();
                 IERC20(token).safeTransfer(platformFeeWallet, value);
-                emit FeeReleased(token,value);
+                emit FeeReleased(token, value);
             }
 
             IERC20(token).safeTransfer(account, payment);
@@ -713,22 +717,15 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         return isImmutable;
     }
 
-    /** @notice Get the revenue path name.
-     */
-    function getRevenuePathName() external view returns (string memory) {
-        return name;
-    }
-
     /** @notice Get the amount of total eth withdrawn by the account
      */
     function getTokenWithdrawn(address token, address account) external view returns (uint256) {
         return released[token][account];
     }
 
-    function getTokenTierLimits(address token, uint256 tier) external view returns (uint256){
-       return tokenTierLimits[token][tier];
+    function getTokenTierLimits(address token, uint256 tier) external view returns (uint256) {
+        return tokenTierLimits[token][tier];
     }
-
 
     /** @notice Update the trusted forwarder address
      *  @param forwarder The address of the new forwarder
@@ -750,8 +747,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @notice Returns total token released
      * @param token The token for which total released amount is fetched
      */
-    function getTotalTokenReleased(address token) external view returns(uint256){
-        
+    function getTotalTokenReleased(address token) external view returns (uint256) {
         return totalTokenReleased[token];
     }
 
@@ -759,27 +755,23 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      * @notice Returns total token accounted for a given token address
      * @param token The token for which total accountd amount is fetched
      */
-    function getTotalTokenAccounted(address token) external view returns(uint256){
-        
+    function getTotalTokenAccounted(address token) external view returns (uint256) {
         return totalTokenAccounted[token];
     }
 
     /**
      * @notice Returns withdrawable or claimable token amount for a given wallet in the revenue path
      */
-    function getWithdrawableToken(address token,address wallet) external view returns(uint256){
-        
+    function getWithdrawableToken(address token, address wallet) external view returns (uint256) {
         return tokenWithdrawable[token][wallet];
-
     }
 
     /**
      * @notice Returns the ReveelMainV2 contract address
      */
-    function getMainFactory()external view returns(address){
+    function getMainFactory() external view returns (address) {
         return mainFactory;
     }
-    
 
     /** @notice Transfer handler for ETH
      * @param recipient The address of the receiver
