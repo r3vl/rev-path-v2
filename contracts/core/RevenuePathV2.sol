@@ -250,7 +250,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
      *  @param token The address of the token
      */
     function distributePendingTokens(address token) public {
-   uint256 pendingAmount = getPendingDistributionAmount(token);
+        uint256 pendingAmount = getPendingDistributionAmount(token);
         uint256 presentTier;
         uint256 currentTierDistribution;
         uint256 tokenLimit;
@@ -260,17 +260,14 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             presentTier = currentTokenTier[token];
             tokenLimit = tokenTierLimits[token][presentTier];
             tokenTotalDistributed = totalDistributed[token][presentTier];
-            if (
-                tokenLimit > 0 &&
-                ( tokenTotalDistributed + pendingAmount) > tokenLimit
-            ) {
+            if (tokenLimit > 0 && (tokenTotalDistributed + pendingAmount) > tokenLimit) {
                 currentTierDistribution = tokenLimit - tokenTotalDistributed;
                 nextTierDistribution = pendingAmount - currentTierDistribution;
             } else {
                 currentTierDistribution = pendingAmount;
                 nextTierDistribution = 0;
             }
- 
+
             if (currentTierDistribution > 0) {
                 address[] memory walletMembers = revenueTiers[presentTier].walletList;
                 uint256 totalWallets = walletMembers.length;
@@ -299,7 +296,6 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
                 currentTokenTier[token] += 1;
             }
         }
-    
     }
 
     /** @notice Get the token amount that has not been allocated for in the revenue path
@@ -390,10 +386,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
             address token = _tokenList[k];
             for (uint256 m; m < totalTiers; ) {
                 if ((totalTiers - 1) != _limitSequence[k].length) {
-                    revert TotalTierLimitsMismatch({
-                        tiers:totalTiers,
-                        limits: _limitSequence[k].length
-                    });
+                    revert TotalTierLimitsMismatch({ tiers: totalTiers, limits: _limitSequence[k].length });
                 }
                 // set tier limits, except for final tier which has no limit
                 if (m != totalTiers - 1) {
@@ -500,7 +493,7 @@ contract RevenuePathV2 is ERC2771Recipient, Ownable, Initializable, ReentrancyGu
         uint256[] calldata _tierNumbers
     ) external isMutable onlyOwner {
         uint256 totalUpdates = _tierNumbers.length;
-        if (_walletList.length != _distribution.length && _walletList.length != totalUpdates) {
+        if (_walletList.length != _distribution.length || _walletList.length != totalUpdates) {
             revert WalletAndDistrbutionCtMismatch({
                 walletCount: _walletList.length,
                 distributionCount: _distribution.length
