@@ -1,6 +1,6 @@
 import { BigNumberish, Event } from "ethers";
 import { ethers as _ethers } from "hardhat";
-import { ERC20TokenLookup, reveelMainLookup } from "./Address_Constants";
+import { ERC20TokenLookup, reveelMainLookup } from "./helpers/constants";
 
 /**
  * deploys a complex RevenuePath from a ReveelMain with 5 digits after the decimal

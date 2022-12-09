@@ -1,5 +1,5 @@
 import hre from "hardhat";
-import { platformWalletLookup } from "./Address_Constants";
+import { platformWalletLookup, trustedForwarderLookup } from "./helpers/constants";
 /**
  * deploys a RevenuePath library & a ReveelMain factory
  */
@@ -7,6 +7,7 @@ async function main() {
 
   // 1. set your wallet
   const platformWallet = platformWalletLookup();
+  const trustedForwarderAddress = trustedForwarderLookup();
 
   // 2. deploy library
   const RevenuePath = await hre.ethers.getContractFactory("RevenuePathV2");
@@ -22,13 +23,22 @@ async function main() {
 
   // 3. deploy Main with library
   const ReveelMain = await hre.ethers.getContractFactory("ReveelMainV2");
-  const reveelMain = await ReveelMain.deploy(library.address, platformFeePercentage, platformWallet, platformWallet);
+  const reveelMain = await ReveelMain.deploy(library.address, platformFeePercentage, platformWallet, trustedForwarderAddress);
 
   await reveelMain.deployed();
 
   console.log(
     `Reveel main deployed to: ${reveelMain.address}`
   );
+  console.log(
+    "verify with:",
+    "\n",
+    `npx hardhat verify --network ${process.env.HARDHAT_NETWORK} ${library.address}`,
+    "\n",
+    `npx hardhat verify --network ${process.env.HARDHAT_NETWORK} ${reveelMain.address} "${library.address}" "${platformFeePercentage}" "${platformWallet}" "${trustedForwarderAddress}"`,
+    "\n",
+    `make sure your hardhat.config.ts etherscan.apiKey is set to the appropriate etherscan/polygonscan for ${process.env.HARDHAT_NETWORK}`
+  )
 }
 
 main().catch((error) => {

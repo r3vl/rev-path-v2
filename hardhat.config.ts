@@ -23,6 +23,14 @@ const chainIds = {
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
+  optimisticEthereum: 10,
+  optimisticGoerli: 420,
+  arbitrumOne: 42161,
+  arbitrumGoerli: 421613,
+  polygon: 137,
+  polygonMumbai: 80001,
+  auroraMainnet: 1313161554,
+  auroraTestnet: 1313161555,
 };
 
 // Ensure that we have all the environment variables we need.
@@ -37,8 +45,37 @@ if (!infuraApiKey) {
   throw new Error("Please set your INFURA_API_KEY in a .env file");
 }
 
+/** you may need to customize the RPC URLs, many public urls are included by default below */
 function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
-  const url: string = "https://" + network + ".infura.io/v3/" + process.env.INFURA_API_KEY;
+  let url: string;
+  switch (network) {
+    case 'polygon':
+      url = "https://rpc.ankr.com/polygon";
+      break;
+    case 'polygonMumbai':
+      url = "https://rpc-mumbai.maticvigil.com";
+      break;
+    case 'auroraMainnet':
+      url = "https://mainnet.aurora.dev";
+      break;
+    case 'auroraTestnet':
+      url = "https://testnet.aurora.dev";
+      break;
+    case 'optimisticEthereum':
+      url = "https://rpc.ankr.com/optimism";
+      break;
+    case 'optimisticGoerli':
+      url = "https://rpc.ankr.com/optimism_testnet";
+      break;
+    case 'arbitrumOne':
+      url = process.env.ARBITRUM_RPC_URL as string;
+      break;
+    case 'arbitrumGoerli':
+      url = "https://goerli-rollup.arbitrum.io/rpc";
+      break;
+    default:
+      url = "https://" + network + ".infura.io/v3/" + process.env.INFURA_API_KEY;
+  }
   let accounts;
   if (mnemonic) {
     accounts = {
@@ -66,7 +103,45 @@ const config: HardhatUserConfig = {
     src: "./contracts",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      // find networks with npx hardhat verify --list-networks
+      mainnet: process.env.ETHERSCAN_API_KEY as string,
+      goerli: process.env.ETHERSCAN_API_KEY as string,
+      optimisticEthereum: process.env.OPTIMISTIC_API_KEY as string,
+      optimisticGoerli: process.env.OPTIMISTIC_API_KEY as string,
+      arbitrumOne: process.env.ARBISCAN_API_KEY as string,
+      arbitrumGoerli: process.env.ARBISCAN_API_KEY as string,
+      polygon: process.env.POLYGONSCAN_API_KEY as string,
+      polygonMumbai: process.env.POLYGONSCAN_API_KEY as string,
+      auroraMainnet: process.env.AURORASCAN_API_KEY as string,
+      auroraTestnet: process.env.AURORASCAN_API_KEY as string,
+    },
+    customChains: [
+      {
+        network: "optimisticGoerli",
+        chainId: 420,
+        urls: {
+          apiURL: "https://api-goerli-optimism.etherscan.io/api",
+          browserURL: "https://goerli-optimism.etherscan.io"
+        }
+      },
+      {
+        network: "arbitrumGoerli",
+        chainId: 421613,
+        urls: {
+          apiURL: "https://api-goerli.arbiscan.io/api",
+          browserURL: "https://goerli.arbiscan.io"
+        }
+      },
+      {
+        network: "auroraMainnet",
+        chainId: 1313161554,
+        urls: {
+          apiURL: "https://api.aurorascan.dev/api",
+          browserURL: "https://aurorascan.dev"
+        }
+      },
+    ]
   },
   docgen: {
     path: "./docs",
@@ -85,6 +160,14 @@ const config: HardhatUserConfig = {
     rinkeby: getChainConfig("rinkeby"),
     ropsten: getChainConfig("ropsten"),
     mainnet: getChainConfig("mainnet"),
+    polygon: getChainConfig("polygon"),
+    polygonMumbai: getChainConfig("polygonMumbai"),
+    optimisticEthereum: getChainConfig("optimisticEthereum"),
+    optimisticGoerli: getChainConfig("optimisticGoerli"),
+    arbitrumOne: getChainConfig("arbitrumOne"),
+    arbitrumGoerli: getChainConfig("arbitrumGoerli"),
+    auroraMainnet: getChainConfig("auroraMainnet"),
+    auroraTestnet: getChainConfig("auroraTestnet"),
   },
   paths: {
     artifacts: "./artifacts",
