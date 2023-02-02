@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: SPWPL
 
 pragma solidity 0.8.15;
+import "@opengsn/contracts/src/ERC2771Recipient.sol";
 
-contract RevenueAggregatorV2 {
+contract RevenueAggregatorV2 is ERC2771Recipient{
     /** @notice Emits when a withdrawal takes place
      * @param path The address of the revenue path
      * @param status Whether the withdrawal suceeded
      */
     event WithdrawStatus(address indexed path, bool indexed status, bytes result);
     error ZeroAddressProvided();
+
+    constructor (address _forwarder){
+
+        _setTrustedForwarder(_forwarder);
+    }
 
     /** @notice Batch withdrawal request for tokens across revenue paths
      * @param paths List of revenue paths
